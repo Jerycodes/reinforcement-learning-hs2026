@@ -17,15 +17,20 @@ fahren gleichzeitig (Agent nach 200k vs. 2 Mio Schritten, Agent vs. Referenzfahr
 Tempo, Telemetrie und Fahrspur (Farbe = Geschwindigkeit).
 
 ### 2. Training live
-Training mit `--stream` starten, Viewer verbinden – alle parallelen Trainings-Karts fahren live auf
-der Strecke (roter Punkt = Abflug), dazu Schritte, Episoden, Ø Return, beste Rundenzeit und
-Schritte/s:
+Training mit `--stream` starten – der Browser öffnet sich, und **ein Kart** fährt in Echtzeit den
+aktuellen Trainingsstand (deterministisch, ohne Erkundungsrauschen; nach jedem Policy-Update fährt
+es mit der neuen Policy weiter). Dazu Schritte, Episoden, Ø Return, beste Rundenzeit und Schritte/s.
+Das Training selbst läuft im Hintergrund mit mehreren parallelen Umgebungen (nur für die
+Geschwindigkeit – es bleibt ein einzelner lernender Agent). Mit `--stream-all` werden diese
+Trainings-Umgebungen zusätzlich als eigene Karts angezeigt (roter Punkt = Abflug).
 
 ```bash
-python train/train_sb3.py --config train/configs/phase1_ppo.yaml --stream     # ws://localhost:8765
-python scripts/serve_viewer.py --no-open                                      # zweites Terminal
-# Browser: http://localhost:8000/viewer/?live  -> "verbinden"
+python train/train_sb3.py --config train/configs/phase1_ppo.yaml --stream     # öffnet den Browser automatisch
+python train/ppo_scratch.py --config train/configs/phase1_ppo.yaml --stream   # geht auch mit dem eigenen PPO
 ```
+`--stream` startet den Websocket (Port 8765) und einen HTTP-Server für den Viewer (Port 8000) und
+öffnet http://localhost:8000/viewer/?live – mit `--no-open` ohne Browser, `--http-port`/`--stream-port`
+für andere Ports.
 Das Training läuft schneller als Echtzeit; der Viewer zeigt jeweils den aktuellen Stand (max. 25 Bilder/s).
 
 ### 3. Live-Server mit Parameter-Panel

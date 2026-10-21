@@ -46,6 +46,8 @@ Lernkurven (Rundenzeit vs. Schritte) und druckt eine Tabelle.
 | `exp_sac.yaml` | SAC statt PPO | sample-effizienter? Rundenzeit nach 1 Mio Schritten |
 | `train/ppo_scratch.py` | eigener PPO, gleiche Config | reproduziert er SB3? (Lernkurve vergleichen) |
 
+| `train/pbt.py` | **Population Based Training**: 4+ Agenten parallel, schlechte übernehmen Gewichte und Hyperparameter der guten (mit Variation) | findet Lernrate/Entropie/Clip automatisch; schneller zur besten Runde? ([Jaderberg et al. 2017](https://arxiv.org/abs/1711.09846)) |
+
 Weitere Ideen: Hyperparameter (Lernrate, `n_steps`, Netzgrösse), Seeds vergleichen (gleiche Config,
 `--seed 1 2 3` – die Streuung ist bei RL gross), Aktion als Lenkwinkel-*Änderung* statt Absolutwert,
 Frame-Stacking (letzte 3 Beobachtungen), Beobachtung mit Punkten der Mittellinie voraus statt Krümmung.

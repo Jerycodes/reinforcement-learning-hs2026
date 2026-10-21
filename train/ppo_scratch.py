@@ -154,8 +154,14 @@ def main():
     ap.add_argument("--seed", type=int, default=None)
     ap.add_argument("--resume", default=None, help="checkpoint .pt to continue from")
     ap.add_argument("--threads", type=int, default=None, help="torch CPU threads")
-    ap.add_argument("--stream", action="store_true", help="stream all training envs to the 3-D viewer (ws://localhost:8765)")
+    ap.add_argument("--stream", action="store_true",
+                    help="open the 3-D viewer: one kart drives the current policy live (ws://localhost:8765)")
+    ap.add_argument("--stream-all", action="store_true", help="with --stream: also show all parallel training envs")
     ap.add_argument("--stream-port", type=int, default=8765)
+    ap.add_argument("--set", action="append", default=[], metavar="KEY=VALUE",
+                    help="override any config value, e.g. --set ppo.learning_rate=1e-4")
+    ap.add_argument("--http-port", type=int, default=8000, help="viewer http port (with --stream)")
+    ap.add_argument("--no-open", action="store_true", help="with --stream: do not open the browser")
     args = ap.parse_args()
 
     cfg = yaml.safe_load(Path(args.config).read_text())
@@ -168,6 +174,13 @@ def main():
         cfg["seed"] = args.seed
     if args.threads:
         torch.set_num_threads(args.threads)
+    for item in args.set:
+        key, _, val = item.partition("=")
+        d = cfg
+        parts = key.split(".")
+        for part in parts[:-1]:
+            d = d.setdefault(part, {})
+        d[parts[-1]] = yaml.safe_load(val)
     p = cfg["ppo"]
     run_dir = Path("runs") / cfg["run_name"]
     (run_dir / "checkpoints").mkdir(parents=True, exist_ok=True)
@@ -232,14 +245,25 @@ def main():
     final_val_buf = np.zeros((n_steps, n_envs), np.float32)
 
     streamer = None
+    n_episodes, recent_returns = 0, []
+    stream_hist = None
+    t0 = time.time()
     if args.stream:
-        from kart_rl.live.stream import StateStreamer
+        from kart_rl.live.stream import Showcase, StateStreamer, open_viewer
 
         streamer = StateStreamer(port=args.stream_port, hello={"track": "Race-Inn Roggwil",
                                                                "policy": f"training:{cfg['run_name']}"})
-        print(f"live stream on ws://localhost:{args.stream_port}  ->  open viewer with ?live")
-    n_episodes, recent_returns = 0, []
-    t0 = time.time()
+        print(f"live stream on ws://localhost:{args.stream_port}")
+        print(f"3D viewer: {open_viewer(args.http_port, args.stream_port, open_browser=not args.no_open)}")
+
+        def stream_stats():
+            return {"steps": global_step, "episodes": n_episodes,
+                    "ep_rew_mean": float(np.mean(recent_returns)) if recent_returns else None,
+                    "best_lap": None if not np.isfinite(best_lap) else float(best_lap),
+                    "elapsed_s": round(time.time() - t0, 1),
+                    "steps_per_s": round(global_step / max(time.time() - t0, 1e-6), 1)}
+
+        Showcase(streamer, cfg.get("env", {}), policy_fn, stream_stats).start()
     recent = []
     obs = venv.obs
     for _ in range(n_updates):
@@ -267,17 +291,22 @@ def main():
             recent_returns = (recent_returns + [e["return"] for e in finished])[-50:]
             obs = next_obs
             global_step += n_envs
-            if streamer is not None and streamer.connected:
+            if streamer is not None and args.stream_all and streamer.connected:
                 from kart_rl.live.stream import env_state_from_info
 
-                streamer.send({"type": "states",
-                               "states": [env_state_from_info(info, i) for i, info in enumerate(venv.infos)],
-                               "training": {"steps": global_step, "episodes": n_episodes,
-                                            "ep_rew_mean": float(np.mean(recent_returns)) if recent_returns else None,
-                                            "best_lap": None if not np.isfinite(best_lap) else float(best_lap),
-                                            "elapsed_s": round(time.time() - t0, 1),
-                                            "steps_per_s": round(global_step / max(time.time() - t0, 1e-6), 1)}},
-                              force=bool(finished))
+                if stream_hist is None or len(stream_hist) != n_envs:
+                    stream_hist = [[] for _ in range(n_envs)]
+                for i, info in enumerate(venv.infos):
+                    stream_hist[i].append([round(info["t"], 2), round(info["x"], 2), round(info["y"], 2), round(info["speed"], 1)])
+                states = [env_state_from_info(info, i + 1) for i, info in enumerate(venv.infos)]
+                for i, st in enumerate(states):
+                    st["hist"] = stream_hist[i]
+                sent = streamer.send({"type": "states", "states": states, "training": stream_stats()},
+                                     force=bool(finished))
+                if sent:
+                    stream_hist = [[] for _ in range(n_envs)]
+            else:
+                stream_hist = None
         with torch.no_grad():
             last_values = model.value(torch.as_tensor(obs, dtype=torch.float32)).numpy()
         adv, ret = compute_gae(rew_buf, val_buf, term_buf, trunc_buf, final_val_buf, last_values, gamma, lam)
@@ -358,6 +387,13 @@ def main():
     dt = time.time() - t0
     print(f"done: {global_step:,} steps in {dt / 60:.1f} min; models in {run_dir}")
     writer.close()
+    if streamer is not None:
+        print("training finished - the viewer keeps driving the final policy (Ctrl+C to quit)")
+        try:
+            while True:
+                time.sleep(1.0)
+        except KeyboardInterrupt:
+            pass
 
 
 if __name__ == "__main__":

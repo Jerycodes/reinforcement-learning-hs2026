@@ -67,6 +67,93 @@ class StateStreamer:
         return True
 
 
+class Showcase(threading.Thread):
+    """One kart that drives the *current* policy deterministically in real time while the
+    training continues in the background. This is what ``--stream`` shows: a clean single
+    kart whose driving improves with every policy update (the parallel training
+    environments stay invisible unless ``--stream-all`` is used).
+
+    ``predict_fn(obs) -> action`` must be safe to call from this thread (a plain forward
+    pass under ``torch.no_grad()``); ``stats_fn() -> dict`` returns the training stats
+    shown in the HUD.
+    """
+
+    def __init__(self, streamer: StateStreamer, env_cfg: dict, predict_fn, stats_fn, dt_wall: float | None = None,
+                 lidar: bool = True):
+        super().__init__(daemon=True)
+        from ..envs import KartLapEnv, LapEnvConfig
+
+        cfg = LapEnvConfig.from_dict(env_cfg)
+        cfg.random_start = False
+        cfg.laps = 10_000
+        cfg.max_time = 1e9
+        cfg.sector_length_m = 0.0
+        cfg.domain_randomization = {}
+        self.env = KartLapEnv(cfg)
+        self.streamer = streamer
+        self.predict_fn = predict_fn
+        self.stats_fn = stats_fn
+        self.dt_wall = dt_wall if dt_wall else cfg.dt
+        self.lidar = lidar
+        self.stop_flag = False
+
+    def run(self):
+        env = self.env
+        obs, _ = env.reset()
+        next_t = time.perf_counter()
+        while not self.stop_flag:
+            if not self.streamer.connected:
+                time.sleep(0.2)
+                next_t = time.perf_counter()
+                continue
+            action = self.predict_fn(obs)
+            obs, _, term, trunc, info = env.step(action)
+            st = env_state_from_info(info, 0)
+            msg = {"type": "state", "state": st, "lap_times": [round(t, 2) for t in info["lap_times"]],
+                   "training": self.stats_fn()}
+            if self.lidar:
+                msg["lidar"] = [[round(float(a), 3), round(float(d), 2)]
+                                for a, d in zip(env.lidar_angles, env.lidar_dist)]
+            self.streamer.send(msg, force=True)
+            if term or trunc:
+                self.streamer.send({"type": "episode_end", "reason": info.get("episode_done", ""),
+                                    "lap_times": [round(t, 2) for t in info["lap_times"]]}, force=True)
+                time.sleep(1.0)
+                obs, _ = env.reset()
+                self.streamer.send({"type": "reset"}, force=True)
+                next_t = time.perf_counter()
+                continue
+            next_t += self.dt_wall
+            delay = next_t - time.perf_counter()
+            if delay > 0:
+                time.sleep(delay)
+            else:
+                next_t = time.perf_counter()
+
+
+def open_viewer(http_port: int = 8000, ws_port: int = 8765, open_browser: bool = True) -> str:
+    """Serve the repository root over HTTP (background thread) and open the viewer in
+    live mode. Returns the URL. If the port is taken (e.g. serve_viewer.py already runs)
+    the existing server is used."""
+    import functools
+    import http.server
+    import webbrowser
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[2]
+    url = f"http://localhost:{http_port}/viewer/?live&ws={ws_port}"
+    try:
+        handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(root))
+        handler.log_message = lambda *a, **k: None
+        httpd = http.server.ThreadingHTTPServer(("127.0.0.1", http_port), handler)
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    except OSError:
+        pass  # port busy: assume a viewer server is already running
+    if open_browser:
+        threading.Timer(1.5, lambda: webbrowser.open(url)).start()
+    return url
+
+
 def env_state_from_info(info: dict, env_id: int) -> dict:
     """Compact state dict for the viewer from a KartLapEnv info dict."""
     return {"id": env_id, "t": round(info["t"], 2), "x": round(info["x"], 3), "y": round(info["y"], 3),

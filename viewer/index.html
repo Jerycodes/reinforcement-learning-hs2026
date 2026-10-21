@@ -60,13 +60,16 @@
   <div id="liveBox" style="display:none">
     <h3>Live (Python-Server)</h3>
     <div class="row"><input type="text" id="wsUrl" value="ws://localhost:8765" style="flex:1"><button id="connect">verbinden</button></div>
-    <div class="row">
-      <button id="liveStart">Start</button><button id="liveStop">Stop</button><button id="liveReset">Reset</button>
+    <div id="trainingInfo" class="small" style="display:none; margin:6px 0">Training läuft. Das Kart fährt den <b>aktuellen Trainingsstand</b> (deterministisch, ohne Erkundungsrauschen) in Echtzeit; nach jedem Update fährt es mit der neuen Policy weiter. Policy wechseln und Parameter geht im Live-Server-Modus (<code>python -m kart_rl.live.server</code>).</div>
+    <div id="serverControls">
+      <div class="row">
+        <button id="liveStart">Start</button><button id="liveStop">Stop</button><button id="liveReset">Reset</button>
+      </div>
+      <div class="row"><label>Policy</label><select id="policy" style="flex:1"></select></div>
+      <div class="row"><label>Tempo</label><select id="liveSpeed"><option value="1">1×</option><option value="2">2×</option><option value="4">4×</option><option value="0">max</option></select></div>
+      <h3>Parameter</h3>
+      <div id="params" class="small">(Schema kommt vom Server)</div>
     </div>
-    <div class="row"><label>Policy</label><select id="policy" style="flex:1"></select></div>
-    <div class="row"><label>Tempo</label><select id="liveSpeed"><option value="1">1×</option><option value="2">2×</option><option value="4">4×</option><option value="0">max</option></select></div>
-    <h3>Parameter</h3>
-    <div id="params" class="small">(Schema kommt vom Server)</div>
   </div>
 
   <h3>Kamera</h3>
@@ -117,7 +120,21 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 $('scene').appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0e1014);
-scene.fog = new THREE.Fog(0x0e1014, 180, 420);
+scene.fog = new THREE.Fog(0x9fb4cc, 220, 520);
+{ // sky dome with a vertical gradient (vertex colours on an inverted sphere)
+  const g = new THREE.SphereGeometry(600, 32, 16);
+  const pos = g.attributes.position, col = [];
+  const top = new THREE.Color(0x2f5d9e), horizon = new THREE.Color(0xc9d8ea), ground = new THREE.Color(0x2a2e36);
+  for (let i = 0; i < pos.count; i++) {
+    const y = pos.getY(i) / 600;
+    const c = y >= 0 ? horizon.clone().lerp(top, Math.pow(y, 0.6)) : horizon.clone().lerp(ground, Math.min(-y * 6, 1));
+    col.push(c.r, c.g, c.b);
+  }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  const sky = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false }));
+  scene.add(sky);
+  scene.background = null;
+}
 const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 800);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
@@ -197,13 +214,13 @@ function buildTrack(t) {
   const x0 = Math.min(...x), x1 = Math.max(...x), y0 = Math.min(...y), y1 = Math.max(...y);
   bounds = { cx: (x0 + x1) / 2, cz: -(y0 + y1) / 2, size: Math.max(x1 - x0, y1 - y0) + 20 };
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(bounds.size * 3, bounds.size * 3),
-    new THREE.MeshStandardMaterial({ color: 0x23262c, roughness: 1 }));
+    new THREE.MeshStandardMaterial({ color: 0x3a3f48, roughness: 1 }));
   floor.rotation.x = -Math.PI / 2; floor.position.set(bounds.cx, -0.02, bounds.cz); floor.receiveShadow = true;
   scene.add(floor);
-  const grid = new THREE.GridHelper(bounds.size * 2, 40, 0x2b2f38, 0x2b2f38);
+  const grid = new THREE.GridHelper(bounds.size * 2, 40, 0x4a505b, 0x4a505b);
   grid.position.set(bounds.cx, -0.015, bounds.cz); scene.add(grid);
 
-  scene.add(ribbon(t.left_edge, t.right_edge, 0x5c6069, true));
+  scene.add(ribbon(t.left_edge, t.right_edge, 0x6a6f78, true));
   scene.add(ribbon(t.pit_lane.left_edge, t.pit_lane.right_edge, 0x474a52, false, -0.005));
   scene.add(wall(t.left_edge, true));
   scene.add(wall(t.right_edge, true));
@@ -220,8 +237,14 @@ function buildTrack(t) {
   overlays.center.visible = $('showCenter').checked;
   scene.add(overlays.center);
   // distance markers every 100 m
-  for (let i = 0; i < t.centerline.length; i += 100) scene.add(label(`${i} m`, t.centerline[i], 0.6));
+  for (let i = 0; i < t.centerline.length; i += 100) {
+    const c = t.centerline[i], l = t.left_edge[i];
+    const d = Math.hypot(l[0] - c[0], l[1] - c[1]) || 1;
+    scene.add(label(`${i} m`, [l[0] + (l[0] - c[0]) / d * 1.5, l[1] + (l[1] - c[1]) / d * 1.5], 0.35));
+  }
   // sun / shadow camera covering the track
+  scene.children.filter(o => o.geometry && o.geometry.type === 'SphereGeometry' && o.material.side === THREE.BackSide)
+    .forEach(o => o.position.set(bounds.cx, 0, bounds.cz));
   sun.position.set(bounds.cx - 60, 120, bounds.cz - 40);
   sun.target.position.set(bounds.cx, 0, bounds.cz); scene.add(sun.target);
   const s = sun.shadow.camera; s.left = -bounds.size; s.right = bounds.size; s.top = bounds.size; s.bottom = -bounds.size; s.far = 400;
@@ -233,8 +256,8 @@ function label(text, p, scale = 1) {
   const c = document.createElement('canvas'); c.width = 256; c.height = 64;
   const ctx = c.getContext('2d'); ctx.font = '36px sans-serif'; ctx.fillStyle = '#cfd4dd'; ctx.textAlign = 'center';
   ctx.fillText(text, 128, 46);
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthTest: false }));
-  sp.scale.set(8 * scale, 2 * scale, 1); sp.position.copy(W(p[0], p[1])).setY(1.2);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true }));
+  sp.scale.set(8 * scale, 2 * scale, 1); sp.position.copy(W(p[0], p[1])).setY(0.9);
   return sp;
 }
 
@@ -393,8 +416,14 @@ function hud(k, st) {
   }
   if (k.lapTimes.length) lines.push(`Runden: ${k.lapTimes.map(t => t.toFixed(2)).join(' | ')}  beste ${Math.min(...k.lapTimes).toFixed(2)} s`);
   if (training) {
-    lines.push('', `TRAINING  ${training.steps.toLocaleString('de-CH')} Schritte   ${training.episodes} Episoden   ${fmt(training.steps_per_s, 0)} Schritte/s`,
+    const head = training.finished ? 'TRAINING FERTIG' : 'TRAINING';
+    const gen = training.generation ? `   Generation ${training.generation}` : '';
+    lines.push('', `${head}  ${training.steps.toLocaleString('de-CH')} Schritte${gen}   ${training.episodes ? training.episodes + ' Episoden   ' : ''}${fmt(training.steps_per_s, 0)} Schritte/s`,
       `Ø Return ${fmt(training.ep_rew_mean, 0)}   beste Rundenzeit ${training.best_lap ? training.best_lap.toFixed(2) + ' s' : '–'}   ${fmt(training.elapsed_s / 60, 1)} min`);
+    if (training.population) {
+      lines.push('Population (Rang, Rundenzeit, Lernrate):');
+      for (const w of training.population) lines.push(`  w${w.id}  ${w.lap ? w.lap.toFixed(2) + ' s' : fmt(w.distance, 0) + ' m'}   lr ${Number(w.lr).toExponential(1)}  ent ${fmt(w.ent, 3)}  clip ${fmt(w.clip, 2)}`);
+    }
   }
   $('hud').textContent = lines.join('\n');
 }
@@ -531,7 +560,7 @@ function pushState(k, st) {
     for (const key of Object.keys(tr)) tr[key].length = 0;
     k.trailN = 0; k.lapStarts = [0]; k.lapTimes = [];
   }
-  for (const key of Object.keys(st)) { if (key === 'id') continue; if (!tr[key]) tr[key] = []; tr[key].push(st[key]); }
+  for (const key of Object.keys(st)) { if (key === 'id' || key === 'hist') continue; if (!tr[key]) tr[key] = []; tr[key].push(st[key]); }
   if (st.lap !== undefined && k.lapStarts[st.lap] === undefined) k.lapStarts[st.lap] = st.t;
   fillTrail(k);
 }
@@ -542,15 +571,28 @@ function handleLive(m) {
     $('policy').innerHTML = m.policies.map(p => `<option value="${p}" ${p === m.policy ? 'selected' : ''}>${p}</option>`).join('');
     buildParams(m.schema);
     clearLive(); training = null;
-    if (m.mode === 'training') { status(`Training-Stream: ${m.policy}`); setCamera('top'); }
+    const isTraining = m.mode === 'training';
+    $('serverControls').style.display = isTraining ? 'none' : '';
+    $('trainingInfo').style.display = isTraining ? '' : 'none';
+    if (isTraining) { newLiveKart('aktueller Trainingsstand'); status(`Training: ${m.policy}`); setCamera('chase'); }
     else { newLiveKart(m.policy || 'live'); status(`Server: ${m.track}, Policy ${m.policy}`); }
   } else if (m.type === 'state') {
     const k = liveKartFor(0, $('policy').value || 'live');
     pushState(k, m.state);
     if (m.lap_times) k.lapTimes = m.lap_times;
+    if (m.training) training = m.training;
     if (m.lidar) drawLidar(m.state, m.lidar);
   } else if (m.type === 'states') {
-    for (const st of m.states) pushState(liveKartFor(st.id, `Kart ${st.id}`), st);
+    for (const st of m.states) {
+      const k = liveKartFor(st.id, `Training-Env ${st.id}`);
+      if (st.hist && st.hist.length) {   // intermediate positions since the last message -> smooth trail
+        for (const [t, x, y, v] of st.hist) {
+          if (t >= st.t) continue;
+          pushState(k, { t, x, y, yaw: st.yaw, vx: v, vy: 0, steer: st.steer, throttle: st.throttle, s: st.s, lap: st.lap, off_track: false });
+        }
+      }
+      pushState(k, st);
+    }
     if (m.training) training = m.training;
   } else if (m.type === 'episode_end') {
     status(`Episode: ${m.reason}, Runden ${(m.lap_times || []).map(t => t.toFixed(2)).join(', ')}`);
@@ -626,6 +668,7 @@ window.kartViewer = {
   const params = new URLSearchParams(location.search);
   const urls = params.getAll('replay');
   for (const u of (urls.length ? urls : DEFAULT_REPLAYS)) await loadReplayUrl(u, true);
+  if (params.get('ws')) $('wsUrl').value = `ws://localhost:${params.get('ws')}`;
   if (params.get('live') !== null) { setMode('live'); $('connect').click(); }
   if (params.get('cam')) setCamera(params.get('cam'));
   if (params.get('panel') === '0') $('panel').classList.add('hidden');

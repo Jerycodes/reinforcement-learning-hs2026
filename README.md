@@ -34,21 +34,21 @@ schnelleres Training (`n_envs` in der Config anpassen).
 ## Training starten und live zuschauen
 
 ```bash
-# Terminal 1: Training (Stable-Baselines3 PPO) – streamt alle Trainings-Karts an den 3D-Viewer
+# Training (Stable-Baselines3 PPO); --stream öffnet den 3D-Viewer im Browser und streamt alle Trainings-Karts
 python train/train_sb3.py --config train/configs/phase1_ppo.yaml --stream
 
-# Terminal 2: 3D-Viewer im Browser (dann http://localhost:8000/viewer/?live -> "verbinden")
-python scripts/serve_viewer.py
-
-# Alternativ 2D: fährt automatisch mit dem jeweils neuesten Checkpoint
+# optional in einem zweiten Terminal, 2D: fährt automatisch mit dem jeweils neuesten Checkpoint
 python scripts/watch_training.py --run runs/phase1_ppo --follow
 
 # Lernkurven
 tensorboard --logdir runs
 ```
 
-Im 3D-Viewer siehst du alle 8 parallelen Trainings-Karts gleichzeitig (Abflüge, Resets, Schritte,
-Episoden, beste Rundenzeit). Details, Replay-Modus und Parameter-Panel: `docs/viewer.md`.
+Im 3D-Viewer fährt ein Kart in Echtzeit den aktuellen Trainingsstand – man sieht zu, wie der Agent
+von Update zu Update besser wird (Schritte, Episoden, beste Rundenzeit im HUD). Das Training selbst
+läuft im Hintergrund mit 8 parallelen Umgebungen (nur fürs Tempo; es ist ein einzelner lernender
+Agent) – `--stream-all` zeigt auch diese. Öffnet sich der Browser nicht von selbst:
+http://localhost:8000/viewer/?live. Details, Replay-Modus und Parameter-Panel: `docs/viewer.md`.
 
 Eigene PPO-Implementierung (gleiche Config, gleiche Umgebung, zum Vergleichen und Verstehen):
 
@@ -81,6 +81,27 @@ python scripts/play_baseline.py --follow                              # Referenz
 
 Referenz-Rundenzeiten (geskriptete Fahrer, gleiches Kart-Modell): Mittellinie 71.6 s,
 berechnete Ideallinie 54.1 s, theoretisches Modell-Optimum ≈ 49.8 s.
+
+## Mehr, länger und schneller trainieren
+
+```bash
+# länger: 3 Mio Schritte sind auf einem M-Series-Mac ~7 Minuten – für die besten Runden 20-50 Mio laufen lassen
+python train/train_sb3.py --config train/configs/phase1_ppo.yaml --run-name phase1_long --total-timesteps 30000000 --n-envs 10 --stream
+
+# jeden Config-Wert von der Kommandozeile überschreiben (--set key=value, beliebig oft)
+python train/train_sb3.py --config train/configs/phase1_ppo.yaml --set ppo.learning_rate=1e-4 --set ppo.n_steps=2048 --set env.n_lidar=31
+
+# weitertrainieren ab Checkpoint (auch nach Stunden / auf einem anderen Rechner)
+python train/train_sb3.py --config train/configs/phase1_ppo.yaml --run-name phase1_long --resume runs/phase1_long/checkpoints/last.zip --stream
+
+# Population Based Training: mehrere Agenten gleichzeitig, die Schlechten übernehmen Gewichte + Hyperparameter der Besten
+python train/pbt.py --config train/configs/phase1_ppo.yaml --workers 4 --n-envs 3 --interval 250000 --total 5000000 --stream
+```
+
+- `n_envs` ≈ Anzahl CPU-Kerne; mehr bringt nichts mehr. Die Schritte/s stehen im Terminal und im Viewer-HUD.
+- Mit `--stream` fährt das Kart nach dem Training mit dem fertigen Modell weiter, bis du Ctrl+C drückst.
+- Alle Hyperparameter stehen in `train/configs/phase1_ppo.yaml` (Lernrate, Netzgrösse, Rollout-Länge, Reward-Gewichte, Episodenlänge …); Kopie anlegen = eigenes Experiment.
+- PBT (`train/pbt.py`): jeder Worker ist ein eigener Prozess mit eigener Lernrate/Entropie/Clip/Gamma; nach jedem Intervall werden alle bewertet, die schlechtesten kopieren die besten und variieren die Hyperparameter (Jaderberg et al. 2017). Ergebnis in `runs/<name>/best.zip`, Verlauf in `pbt_log.csv`, Population im Viewer-HUD.
 
 ## 3D-Viewer, Video und Experimente
 

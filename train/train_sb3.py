@@ -95,29 +95,64 @@ class LapTimeEval(BaseCallback):
 
 
 class LiveStream(BaseCallback):
-    """Stream the state of every training environment to the 3-D viewer (``--stream``)."""
+    """Stream to the 3-D viewer (``--stream``).
 
-    def __init__(self, port: int, run_name: str, eval_cb: "LapTimeEval", verbose: int = 0):
+    Default: one showcase kart drives the current policy deterministically in real time
+    (a clean single-agent view that improves with every update). With ``stream_all`` the
+    states of all parallel training environments are streamed as well.
+    """
+
+    def __init__(self, port: int, run_name: str, eval_cb: "LapTimeEval", env_cfg: dict, stream_all: bool = False,
+                 verbose: int = 0):
         super().__init__(verbose)
         from kart_rl.live.stream import StateStreamer
 
         self.streamer = StateStreamer(port=port, hello={"track": "Race-Inn Roggwil", "policy": f"training:{run_name}"})
         self.eval_cb = eval_cb
+        self.env_cfg = env_cfg
+        self.stream_all = stream_all
         self.episodes = 0
         self.t0 = time.time()
-        print(f"live stream on ws://localhost:{port}  ->  open viewer with ?live")
+        self.hist = None
+        self.showcase = None
+        print(f"live stream on ws://localhost:{port}")
 
-    def _on_step(self) -> bool:
-        from kart_rl.live.stream import env_state_from_info
+    def _on_training_start(self) -> None:
+        import copy
 
-        infos = self.locals.get("infos", [])
-        dones = self.locals.get("dones", [])
-        self.episodes += int(np.sum(dones)) if len(dones) else 0
-        if not self.streamer.connected:
-            return True
-        states = [env_state_from_info(info, i) for i, info in enumerate(infos)]
+        import torch
+
+        from kart_rl.live.stream import Showcase
+
+        model = self.model
+        low, high = model.action_space.low, model.action_space.high
+        # The showcase thread uses its own copy of the policy: SB3 policies keep the
+        # action distribution as shared state, so calling the training policy from
+        # another thread would corrupt the rollout actions. Weights are synced after
+        # every update (see _on_rollout_start).
+        self.policy_copy = copy.deepcopy(model.policy).eval()
+        policy_copy = self.policy_copy
+
+        def predict(obs):
+            with torch.no_grad():
+                t = torch.as_tensor(obs, dtype=torch.float32).unsqueeze(0)
+                a = policy_copy._predict(t, deterministic=True).cpu().numpy()[0]
+            return np.clip(a, low, high)
+
+        self.showcase = Showcase(self.streamer, self.env_cfg, predict, self.stats)
+        self.showcase.start()
+
+    def _on_rollout_start(self) -> None:
+        if getattr(self, "policy_copy", None) is not None:
+            import torch
+
+            with torch.no_grad():
+                self.policy_copy.load_state_dict(self.model.policy.state_dict())
+
+    def stats(self) -> dict:
         buf = self.model.ep_info_buffer
-        training = {
+        return {
+            "finished": bool(getattr(self, "finished", False)),
             "steps": int(self.num_timesteps), "episodes": int(self.episodes),
             "ep_rew_mean": float(np.mean([e["r"] for e in buf])) if len(buf) else None,
             "ep_len_mean": float(np.mean([e["l"] for e in buf])) if len(buf) else None,
@@ -125,8 +160,30 @@ class LiveStream(BaseCallback):
             "elapsed_s": round(time.time() - self.t0, 1),
             "steps_per_s": round(self.num_timesteps / max(time.time() - self.t0, 1e-6), 1),
         }
-        self.streamer.send({"type": "states", "states": states, "training": training}, force=bool(np.any(dones)))
+
+    def _on_step(self) -> bool:
+        from kart_rl.live.stream import env_state_from_info
+
+        infos = self.locals.get("infos", [])
+        dones = self.locals.get("dones", [])
+        self.episodes += int(np.sum(dones)) if len(dones) else 0
+        if not self.stream_all or not self.streamer.connected:
+            self.hist = None
+            return True
+        # intermediate positions since the last message (the viewer draws smooth trails from them)
+        if self.hist is None or len(self.hist) != len(infos):
+            self.hist = [[] for _ in infos]
+        for i, info in enumerate(infos):
+            self.hist[i].append([round(info["t"], 2), round(info["x"], 2), round(info["y"], 2), round(info["speed"], 1)])
+        states = [env_state_from_info(info, i + 1) for i, info in enumerate(infos)]
+        for i, st in enumerate(states):
+            st["hist"] = self.hist[i]
+        if self.streamer.send({"type": "states", "states": states, "training": self.stats()}, force=bool(np.any(dones))):
+            self.hist = [[] for _ in infos]
         return True
+
+    def _on_training_end(self) -> None:
+        self._on_rollout_start()  # final weight sync for the showcase kart
 
 
 class Curriculum(BaseCallback):
@@ -159,6 +216,19 @@ class Curriculum(BaseCallback):
         return True
 
 
+def apply_overrides(cfg: dict, items: list[str]):
+    """``--set a.b.c=value`` -> cfg["a"]["b"]["c"] = value (YAML-parsed, so 1e-4, true, [1,2] work)."""
+    for item in items:
+        key, _, val = item.partition("=")
+        if not _:
+            raise SystemExit(f"--set expects KEY=VALUE, got '{item}'")
+        d = cfg
+        parts = key.split(".")
+        for part in parts[:-1]:
+            d = d.setdefault(part, {})
+        d[parts[-1]] = yaml.safe_load(val)
+
+
 def linear_schedule(initial: float):
     return lambda progress_remaining: progress_remaining * initial
 
@@ -173,8 +243,14 @@ def main():
     ap.add_argument("--resume", default=None, help="model .zip to continue training from")
     ap.add_argument("--subproc", action="store_true", default=None, help="force SubprocVecEnv")
     ap.add_argument("--no-subproc", dest="subproc", action="store_false")
-    ap.add_argument("--stream", action="store_true", help="stream all training envs to the 3-D viewer (ws://localhost:8765)")
+    ap.add_argument("--stream", action="store_true",
+                    help="open the 3-D viewer: one kart drives the current policy live (ws://localhost:8765)")
+    ap.add_argument("--stream-all", action="store_true", help="with --stream: also show all parallel training envs")
     ap.add_argument("--stream-port", type=int, default=8765)
+    ap.add_argument("--set", action="append", default=[], metavar="KEY=VALUE",
+                    help="override any config value, e.g. --set ppo.learning_rate=1e-4 --set env.n_lidar=31")
+    ap.add_argument("--http-port", type=int, default=8000, help="viewer http port (with --stream)")
+    ap.add_argument("--no-open", action="store_true", help="with --stream: do not open the browser")
     args = ap.parse_args()
 
     cfg = yaml.safe_load(Path(args.config).read_text())
@@ -186,6 +262,7 @@ def main():
         cfg["n_envs"] = args.n_envs
     if args.seed is not None:
         cfg["seed"] = args.seed
+    apply_overrides(cfg, args.set)
     run_dir = Path("runs") / cfg["run_name"]
     (run_dir / "checkpoints").mkdir(parents=True, exist_ok=True)
     (run_dir / "config.yaml").write_text(yaml.safe_dump(cfg, sort_keys=False))
@@ -246,7 +323,10 @@ def main():
         eval_cb,
     ]
     if args.stream:
-        callbacks.append(LiveStream(args.stream_port, cfg["run_name"], eval_cb))
+        from kart_rl.live.stream import open_viewer
+
+        callbacks.append(LiveStream(args.stream_port, cfg["run_name"], eval_cb, env_cfg, stream_all=args.stream_all))
+        print(f"3D viewer: {open_viewer(args.http_port, args.stream_port, open_browser=not args.no_open)}")
     if cfg.get("curriculum"):
         callbacks.append(Curriculum(cfg["curriculum"]))
     refs = load_reference_lap_times()
@@ -264,6 +344,18 @@ def main():
     print(f"done: {model.num_timesteps:,} steps in {dt / 60:.1f} min ({model.num_timesteps / max(dt, 1):.0f} steps/s)")
     print(f"models: {run_dir / 'checkpoints' / 'last.zip'}  best: {run_dir / 'best.zip'}")
     vec.close()
+    if args.stream:
+        # keep the showcase kart driving with the final policy until Ctrl+C
+        stream_cb = next(c for c in callbacks if isinstance(c, LiveStream))
+        stream_cb.finished = True
+        if stream_cb.showcase is not None:
+            stream_cb.showcase.stop_flag = False
+        print("training finished - the viewer keeps driving the final policy (Ctrl+C to quit)")
+        try:
+            while True:
+                time.sleep(1.0)
+        except KeyboardInterrupt:
+            pass
 
 
 if __name__ == "__main__":
