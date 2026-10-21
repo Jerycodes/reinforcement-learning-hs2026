@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kart-rl"
+version = "0.1.0"
+description = "Go-kart racing simulation and reinforcement learning environments (Race-Inn Roggwil)"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "gymnasium>=0.29",
+    "matplotlib>=3.7",
+    "imageio>=2.30",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+train = ["torch>=2.1", "stable-baselines3>=2.3", "tensorboard>=2.14", "tqdm", "rich"]
+dev = ["pytest>=7", "ruff"]
+tools = ["opencv-python-headless>=4.8", "scikit-image>=0.21"]
+
+[tool.setuptools.packages.find]
+include = ["kart_rl*"]
+
+[tool.setuptools.package-data]
+kart_rl = ["data/*.json", "data/*.png"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 110
