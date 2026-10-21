@@ -145,6 +145,7 @@ runs/                    Trainingsläufe (Checkpoints/TensorBoard sind git-ignor
 
 ## Dokumentation
 
+- `docs/grundlagen.md` – **RL verstehen am Projekt**: MDP, Zustand, Aktion, Reward, Policy, PPO – was, wie, wo im Code (zuerst lesen)
 - `docs/strecke.md` – Streckenextraktion, Koordinatensystem, Datenformat
 - `docs/simulation.md` – Kart-Modell, Beobachtung, Aktion, Reward, Episoden
 - `docs/ideallinie.md` – berechnete Ideallinie als Vergleich
