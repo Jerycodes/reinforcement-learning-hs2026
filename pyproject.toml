@@ -15,10 +15,11 @@ dependencies = [
     "matplotlib>=3.7",
     "imageio>=2.30",
     "pyyaml>=6.0",
+    "websockets>=12",
 ]
 
 [project.optional-dependencies]
-train = ["torch>=2.1", "stable-baselines3>=2.3", "tensorboard>=2.14", "tqdm", "rich"]
+train = ["torch>=2.1", "stable-baselines3>=2.3", "tensorboard>=2.14", "imageio-ffmpeg>=0.5", "tqdm", "rich"]
 dev = ["pytest>=7", "ruff"]
 tools = ["opencv-python-headless>=4.8", "scikit-image>=0.21"]
 

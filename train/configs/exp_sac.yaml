@@ -1,0 +1,47 @@
+run_name: exp_sac
+seed: 0
+total_timesteps: 1000000
+n_envs: 4
+env:
+  laps: 2
+  max_time: 150.0
+  random_start: true
+  start_speed_max: 8.0
+  off_track_margin: 0.4
+  off_track_mode: terminate
+  reward_progress: 1.0
+  reward_off_track: -20.0
+  reward_steer_change: 0.05
+ppo:
+  learning_rate: 0.0003
+  lr_schedule: linear
+  n_steps: 1024
+  batch_size: 512
+  n_epochs: 10
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  ent_coef: 0.001
+  vf_coef: 0.5
+  max_grad_norm: 0.5
+  hidden_sizes:
+  - 256
+  - 256
+  activation: tanh
+  log_std_init: -0.5
+normalize_reward: true
+checkpoint_every: 200000
+eval_every: 100000
+eval_laps: 2
+algo: sac
+sac:
+  learning_rate: 0.0003
+  buffer_size: 300000
+  learning_starts: 10000
+  batch_size: 256
+  train_freq: 1
+  gradient_steps: 1
+  ent_coef: auto
+  hidden_sizes:
+  - 256
+  - 256

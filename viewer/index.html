@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kart-RL 3D-Viewer</title>
+<style>
+  :root { --bg:#0e1014; --panel:#161a21; --line:#2a303b; --fg:#e8eaf0; --muted:#8b93a3; --acc:#ff5a36; --ok:#3fd0ff; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--fg); font:13px/1.4 -apple-system, "Segoe UI", Roboto, sans-serif; overflow:hidden; }
+  #scene { position:absolute; inset:0; }
+  #hud { position:absolute; left:12px; top:12px; padding:10px 12px; background:#000000aa; border:1px solid var(--line); border-radius:8px; font-family: ui-monospace, Menlo, monospace; font-size:12px; white-space:pre; pointer-events:none; min-width:260px; }
+  #panel { position:absolute; right:0; top:0; bottom:0; width:300px; background:var(--panel); border-left:1px solid var(--line); overflow-y:auto; padding:12px 14px 24px; box-sizing:border-box; transition:transform .2s; }
+  #panel.hidden { transform:translateX(100%); }
+  #toggle { position:absolute; right:12px; top:12px; z-index:5; }
+  #panel.hidden ~ #toggle { right:12px; }
+  h3 { margin:14px 0 6px; font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+  button, select, input[type=text], input[type=number] { background:#20252e; color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:5px 8px; font:inherit; }
+  button { cursor:pointer; } button:hover { border-color:var(--muted); } button.active { border-color:var(--acc); color:var(--acc); }
+  .row { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin:4px 0; }
+  .row label { color:var(--muted); min-width:84px; }
+  input[type=range] { width:100%; }
+  .param { margin:6px 0; } .param .lbl { display:flex; justify-content:space-between; color:var(--muted); font-size:12px; }
+  .param .lbl b { color:var(--fg); font-weight:500; font-family:ui-monospace, Menlo, monospace; }
+  #timeline { position:absolute; left:12px; right:312px; bottom:12px; background:#000000aa; border:1px solid var(--line); border-radius:8px; padding:8px 12px; display:flex; gap:10px; align-items:center; }
+  #panel.hidden ~ #timeline { right:12px; }
+  #timeline input[type=range] { flex:1; }
+  #legend { position:absolute; left:12px; bottom:64px; font-size:12px; pointer-events:none; }
+  .sw { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:middle; }
+  #status { color:var(--muted); font-size:12px; min-height:16px; }
+  .small { color:var(--muted); font-size:11px; }
+  a { color:var(--ok); }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js",
+               "three/addons/": "./vendor/addons/" } }
+</script>
+</head>
+<body>
+<div id="scene"></div>
+<div id="hud">lade Strecke …</div>
+<div id="legend"></div>
+<div id="panel">
+  <div class="row"><b style="font-size:14px">Kart-RL 3D-Viewer</b></div>
+  <div id="status"></div>
+
+  <h3>Modus</h3>
+  <div class="row">
+    <button id="modeReplay" class="active">Replay</button>
+    <button id="modeLive">Live</button>
+  </div>
+
+  <div id="replayBox">
+    <h3>Replays</h3>
+    <div class="row"><input type="file" id="file" accept=".json" multiple></div>
+    <div class="row"><input type="text" id="url" placeholder="../replays/agent.json" style="flex:1"><button id="loadUrl">laden</button></div>
+    <div id="replayList" class="small"></div>
+    <div class="row"><button id="clearReplays">alle entfernen</button></div>
+  </div>
+
+  <div id="liveBox" style="display:none">
+    <h3>Live (Python-Server)</h3>
+    <div class="row"><input type="text" id="wsUrl" value="ws://localhost:8765" style="flex:1"><button id="connect">verbinden</button></div>
+    <div class="row">
+      <button id="liveStart">Start</button><button id="liveStop">Stop</button><button id="liveReset">Reset</button>
+    </div>
+    <div class="row"><label>Policy</label><select id="policy" style="flex:1"></select></div>
+    <div class="row"><label>Tempo</label><select id="liveSpeed"><option value="1">1×</option><option value="2">2×</option><option value="4">4×</option><option value="0">max</option></select></div>
+    <h3>Parameter</h3>
+    <div id="params" class="small">(Schema kommt vom Server)</div>
+  </div>
+
+  <h3>Kamera</h3>
+  <div class="row">
+    <button data-cam="chase" class="cam active">Verfolger</button>
+    <button data-cam="onboard" class="cam">Onboard</button>
+    <button data-cam="top" class="cam">Draufsicht</button>
+    <button data-cam="free" class="cam">Frei</button>
+  </div>
+  <div class="small">Tasten 1–4 wechseln die Kamera, Leertaste = Play/Pause</div>
+
+  <h3>Anzeige</h3>
+  <div class="row"><label><input type="checkbox" id="showCenter"> Mittellinie</label></div>
+  <div class="row"><label><input type="checkbox" id="showRaceline" checked> berechnete Ideallinie</label></div>
+  <div class="row"><label><input type="checkbox" id="showTrail" checked> Fahrspur (Farbe = Tempo)</label></div>
+  <div class="row"><label><input type="checkbox" id="showLidar"> Lidar-Strahlen (nur Live)</label></div>
+  <div class="row"><label>HUD-Kart</label><select id="hudKart"></select></div>
+</div>
+<button id="toggle">☰</button>
+<div id="timeline">
+  <button id="play">⏸</button>
+  <span id="time" style="font-family:ui-monospace, Menlo, monospace; min-width:72px">0.0 s</span>
+  <input type="range" id="scrub" min="0" max="1000" value="0">
+  <select id="speed"><option value="0.25">¼×</option><option value="0.5">½×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+// ------------------------------------------------------------------ helpers
+const $ = id => document.getElementById(id);
+const TRACK_URL = '../kart_rl/data/race_inn_roggwil.json';
+const RACELINE_URL = '../kart_rl/data/race_inn_roggwil_raceline.json';
+const DEFAULT_REPLAYS = ['../replays/agent.json', '../replays/baseline_raceline.json'];
+const COLORS = [0xff5a36, 0x3fd0ff, 0xffb000, 0x7cff6b, 0xd36bff, 0xffffff];
+const W = (x, y) => new THREE.Vector3(x, 0, -y);          // world (x east, y north) -> three.js
+const lerpAngle = (a, b, t) => { let d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return a + d * t; };
+const speedColor = v => new THREE.Color().setHSL(0.66 - 0.66 * Math.min(v / 18, 1), 0.9, 0.55);
+
+// ------------------------------------------------------------------ scene
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+$('scene').appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0e1014);
+scene.fog = new THREE.Fog(0x0e1014, 180, 420);
+const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 800);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.enabled = false;
+
+scene.add(new THREE.HemisphereLight(0xdfe7ff, 0x30343c, 1.1));
+const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+scene.add(sun);
+
+function resize() {
+  const w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ------------------------------------------------------------------ track
+let track = null, raceline = null, center = null;
+const overlays = {};
+let bounds = { cx: 70, cz: -55, size: 140 };
+
+function ribbon(left, right, color, closed, y = 0) {
+  const n = left.length, pos = [], idx = [];
+  for (let i = 0; i < n; i++) { pos.push(left[i][0], y, -left[i][1], right[i][0], y, -right[i][1]); }
+  const m = closed ? n : n - 1;
+  for (let i = 0; i < m; i++) { const j = (i + 1) % n; idx.push(2 * i, 2 * i + 1, 2 * j, 2 * i + 1, 2 * j + 1, 2 * j); }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  const mesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color, roughness: 0.95, metalness: 0, side: THREE.DoubleSide }));
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+function wall(points, closed, h = 0.45) {
+  const n = points.length, pos = [], col = [], idx = [];
+  const red = new THREE.Color(0xd12c2c), white = new THREE.Color(0xf2f2f2);
+  for (let i = 0; i < n; i++) {
+    const c = (Math.floor(i / 3) % 2) ? red : white;
+    pos.push(points[i][0], 0, -points[i][1], points[i][0], h, -points[i][1]);
+    col.push(c.r, c.g, c.b, c.r, c.g, c.b);
+  }
+  const m = closed ? n : n - 1;
+  for (let i = 0; i < m; i++) { const j = (i + 1) % n; idx.push(2 * i, 2 * i + 1, 2 * j, 2 * i + 1, 2 * j + 1, 2 * j); }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  const mesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, side: THREE.DoubleSide }));
+  mesh.castShadow = true;
+  return mesh;
+}
+
+function polyline(points, color, closed, y = 0.03, width = 1) {
+  const pts = points.map(p => W(p[0], p[1]).setY(y));
+  if (closed) pts.push(pts[0].clone());
+  const g = new THREE.BufferGeometry().setFromPoints(pts);
+  return new THREE.Line(g, new THREE.LineBasicMaterial({ color, linewidth: width, transparent: true, opacity: 0.9 }));
+}
+
+function checkerTexture() {
+  const c = document.createElement('canvas'); c.width = 64; c.height = 16;
+  const ctx = c.getContext('2d');
+  for (let i = 0; i < 8; i++) for (let j = 0; j < 2; j++) { ctx.fillStyle = ((i + j) % 2) ? '#111' : '#eee'; ctx.fillRect(i * 8, j * 8, 8, 8); }
+  const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; return t;
+}
+
+function buildTrack(t) {
+  track = t;
+  const x = t.centerline.map(p => p[0]), y = t.centerline.map(p => p[1]);
+  const x0 = Math.min(...x), x1 = Math.max(...x), y0 = Math.min(...y), y1 = Math.max(...y);
+  bounds = { cx: (x0 + x1) / 2, cz: -(y0 + y1) / 2, size: Math.max(x1 - x0, y1 - y0) + 20 };
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(bounds.size * 3, bounds.size * 3),
+    new THREE.MeshStandardMaterial({ color: 0x23262c, roughness: 1 }));
+  floor.rotation.x = -Math.PI / 2; floor.position.set(bounds.cx, -0.02, bounds.cz); floor.receiveShadow = true;
+  scene.add(floor);
+  const grid = new THREE.GridHelper(bounds.size * 2, 40, 0x2b2f38, 0x2b2f38);
+  grid.position.set(bounds.cx, -0.015, bounds.cz); scene.add(grid);
+
+  scene.add(ribbon(t.left_edge, t.right_edge, 0x5c6069, true));
+  scene.add(ribbon(t.pit_lane.left_edge, t.pit_lane.right_edge, 0x474a52, false, -0.005));
+  scene.add(wall(t.left_edge, true));
+  scene.add(wall(t.right_edge, true));
+  // start/finish line
+  const l = t.left_edge[0], r = t.right_edge[0];
+  const len = Math.hypot(r[0] - l[0], r[1] - l[1]);
+  const sf = new THREE.Mesh(new THREE.PlaneGeometry(len, 0.8), new THREE.MeshBasicMaterial({ map: checkerTexture() }));
+  sf.rotation.x = -Math.PI / 2;
+  sf.rotation.z = -Math.atan2(r[1] - l[1], r[0] - l[0]);
+  sf.position.set((l[0] + r[0]) / 2, 0.01, -(l[1] + r[1]) / 2);
+  scene.add(sf);
+  // overlays
+  overlays.center = polyline(t.centerline, 0x8a8f99, true, 0.03);
+  overlays.center.visible = $('showCenter').checked;
+  scene.add(overlays.center);
+  // distance markers every 100 m
+  for (let i = 0; i < t.centerline.length; i += 100) scene.add(label(`${i} m`, t.centerline[i], 0.6));
+  // sun / shadow camera covering the track
+  sun.position.set(bounds.cx - 60, 120, bounds.cz - 40);
+  sun.target.position.set(bounds.cx, 0, bounds.cz); scene.add(sun.target);
+  const s = sun.shadow.camera; s.left = -bounds.size; s.right = bounds.size; s.top = bounds.size; s.bottom = -bounds.size; s.far = 400;
+  s.updateProjectionMatrix();
+  setCamera('chase');
+}
+
+function label(text, p, scale = 1) {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 64;
+  const ctx = c.getContext('2d'); ctx.font = '36px sans-serif'; ctx.fillStyle = '#cfd4dd'; ctx.textAlign = 'center';
+  ctx.fillText(text, 128, 46);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthTest: false }));
+  sp.scale.set(8 * scale, 2 * scale, 1); sp.position.copy(W(p[0], p[1])).setY(1.2);
+  return sp;
+}
+
+// ------------------------------------------------------------------ kart model
+let gltfKart = null;
+new GLTFLoader().load('assets/kart.glb', g => { gltfKart = g.scene; }, undefined, () => {});
+
+function makeKart(color) {
+  const g = new THREE.Group();
+  if (gltfKart) { const m = gltfKart.clone(); g.add(m); return g; }
+  const body = new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.2 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x15171b, roughness: 0.9 });
+  const add = (geo, mat, x, y, z, rx = 0, ry = 0, rz = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); m.castShadow = true; g.add(m); return m; };
+  add(new THREE.BoxGeometry(1.5, 0.06, 0.9), body, 0.05, 0.12, 0);            // floor tray
+  add(new THREE.BoxGeometry(0.55, 0.18, 0.85), body, 0.78, 0.2, 0);           // nose
+  add(new THREE.BoxGeometry(0.9, 0.14, 0.2), body, -0.1, 0.17, 0.55);         // side pods
+  add(new THREE.BoxGeometry(0.9, 0.14, 0.2), body, -0.1, 0.17, -0.55);
+  add(new THREE.BoxGeometry(0.1, 0.16, 1.3), body, -0.9, 0.2, 0);             // rear bumper
+  add(new THREE.BoxGeometry(0.42, 0.5, 0.46), dark, -0.3, 0.38, 0);           // seat
+  add(new THREE.BoxGeometry(0.3, 0.45, 0.38), new THREE.MeshStandardMaterial({ color: 0x2f6fde }), -0.25, 0.5, 0); // torso
+  add(new THREE.SphereGeometry(0.15, 16, 12), new THREE.MeshStandardMaterial({ color: 0xf2f2f2 }), -0.25, 0.86, 0); // helmet
+  add(new THREE.BoxGeometry(0.35, 0.08, 0.2), dark, -0.35, 0.28, 0.42);       // engine
+  const wheel = new THREE.MeshStandardMaterial({ color: 0x101114, roughness: 0.7 });
+  const fw = (z) => add(new THREE.CylinderGeometry(0.14, 0.14, 0.13, 20), wheel, 0.52, 0.14, z, Math.PI / 2, 0, 0);
+  const rw = (z) => add(new THREE.CylinderGeometry(0.17, 0.17, 0.2, 20), wheel, -0.52, 0.17, z, Math.PI / 2, 0, 0);
+  g.userData.frontWheels = [fw(0.5), fw(-0.5)];
+  rw(0.6); rw(-0.6);
+  const sw = add(new THREE.TorusGeometry(0.14, 0.02, 8, 24), dark, 0.12, 0.52, 0, 0, Math.PI / 2 + 0.6, 0);
+  g.userData.steeringWheel = sw;
+  return g;
+}
+
+// ------------------------------------------------------------------ replays / karts
+const karts = [];   // {name, color, traj, group, trail, trailN, lapTimes}
+let tCursor = 0, playing = true, playSpeed = 1, mode = 'replay';
+let hudIndex = 0;
+
+function addKart(name, traj, meta = {}) {
+  const color = COLORS[karts.length % COLORS.length];
+  const group = makeKart(color);
+  scene.add(group);
+  const n = traj.t.length;
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(Math.max(n, 2) * 3), 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array(Math.max(n, 2) * 3), 3));
+  const trail = new THREE.Line(g, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.85 }));
+  trail.frustumCulled = false;
+  scene.add(trail);
+  const k = { name, color, traj, group, trail, trailN: 0, meta, lapTimes: meta.lap_times || [] };
+  karts.push(k);
+  fillTrail(k);
+  refreshKartList();
+  return k;
+}
+
+function fillTrail(k) {
+  const n = k.traj.t.length, pos = k.trail.geometry.attributes.position, col = k.trail.geometry.attributes.color;
+  if (pos.count < n) {  // grow (live mode)
+    const g = k.trail.geometry;
+    const cap = Math.max(n * 2, 1024);
+    const np = new Float32Array(cap * 3), nc = new Float32Array(cap * 3);
+    np.set(pos.array); nc.set(col.array);
+    g.setAttribute('position', new THREE.Float32BufferAttribute(np, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(nc, 3));
+    k.trailN = 0;
+    return fillTrail(k);
+  }
+  for (let i = k.trailN; i < n; i++) {
+    pos.setXYZ(i, k.traj.x[i], 0.08, -k.traj.y[i]);
+    const c = speedColor(Math.hypot(k.traj.vx[i], k.traj.vy[i] || 0));
+    col.setXYZ(i, c.r, c.g, c.b);
+  }
+  pos.needsUpdate = true; col.needsUpdate = true;
+  k.trailN = n;
+}
+
+function removeKarts() {
+  for (const k of karts) { scene.remove(k.group); scene.remove(k.trail); }
+  karts.length = 0;
+  refreshKartList();
+}
+
+function refreshKartList() {
+  $('replayList').innerHTML = karts.map((k, i) => `<div><span class="sw" style="background:#${k.color.toString(16).padStart(6, '0')}"></span>${k.name}` +
+    (k.lapTimes.length ? ` – Runden: ${k.lapTimes.map(t => t.toFixed(2) + ' s').join(', ')}` : '') + `</div>`).join('');
+  $('legend').innerHTML = karts.map(k => `<div><span class="sw" style="background:#${k.color.toString(16).padStart(6, '0')}"></span>${k.name}</div>`).join('');
+  $('hudKart').innerHTML = karts.map((k, i) => `<option value="${i}">${k.name}</option>`).join('');
+  $('hudKart').value = Math.min(hudIndex, Math.max(karts.length - 1, 0));
+  updateScrub();
+}
+
+function maxTime() { return Math.max(0, ...karts.map(k => k.traj.t[k.traj.t.length - 1] || 0)); }
+function updateScrub() { const m = maxTime(); $('scrub').max = Math.max(1, Math.round(m * 10)); }
+
+function sample(traj, t) {
+  const T = traj.t, n = T.length;
+  if (n === 0) return null;
+  if (t <= T[0]) return at(traj, 0);
+  if (t >= T[n - 1]) return at(traj, n - 1);
+  let lo = 0, hi = n - 1;
+  while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (T[mid] <= t) lo = mid; else hi = mid; }
+  const a = at(traj, lo), b = at(traj, hi), u = (t - T[lo]) / Math.max(T[hi] - T[lo], 1e-6);
+  const out = {};
+  for (const key of Object.keys(a)) {
+    if (typeof a[key] !== 'number') { out[key] = a[key]; continue; }
+    out[key] = key === 'yaw' ? lerpAngle(a[key], b[key], u) : (key === 'lap' ? a[key] : a[key] + (b[key] - a[key]) * u);
+  }
+  return out;
+}
+function at(traj, i) { const o = {}; for (const key of Object.keys(traj)) o[key] = traj[key][i]; return o; }
+
+// ------------------------------------------------------------------ camera
+let camMode = 'chase';
+const camPos = new THREE.Vector3(), camLook = new THREE.Vector3();
+function setCamera(m) {
+  camMode = m;
+  document.querySelectorAll('.cam').forEach(b => b.classList.toggle('active', b.dataset.cam === m));
+  controls.enabled = (m === 'free');
+  if (m === 'top') { camera.position.set(bounds.cx, bounds.size * 1.05, bounds.cz + 1); camera.lookAt(bounds.cx, 0, bounds.cz); }
+  if (m === 'free') { controls.target.set(bounds.cx, 0, bounds.cz); camera.position.set(bounds.cx + 40, 60, bounds.cz + 90); controls.update(); }
+}
+document.querySelectorAll('.cam').forEach(b => b.addEventListener('click', () => setCamera(b.dataset.cam)));
+
+function updateCamera(k, st, dt) {
+  if (!st) return;
+  const p = W(st.x, st.y), fwd = new THREE.Vector3(Math.cos(st.yaw), 0, -Math.sin(st.yaw));
+  if (camMode === 'chase') {
+    camPos.copy(p).addScaledVector(fwd, -9).add(new THREE.Vector3(0, 4, 0));
+    camLook.copy(p).addScaledVector(fwd, 6).add(new THREE.Vector3(0, 0.8, 0));
+    const a = 1 - Math.exp(-dt * 4);
+    camera.position.lerp(camPos, a);
+    camera.lookAt(camLook);
+  } else if (camMode === 'onboard') {
+    camera.position.copy(p).addScaledVector(fwd, -0.2).add(new THREE.Vector3(0, 1.0, 0));
+    camLook.copy(p).addScaledVector(fwd, 10).add(new THREE.Vector3(0, 0.5, 0));
+    camera.lookAt(camLook);
+  }
+}
+
+// ------------------------------------------------------------------ HUD
+function fmt(v, d = 1) { return (v === undefined || v === null || Number.isNaN(v)) ? '–' : v.toFixed(d); }
+function hud(k, st) {
+  if (!k || !st) { $('hud').textContent = karts.length ? '' : 'Kein Replay geladen.\nDatei wählen oder Live verbinden.'; return; }
+  const v = Math.hypot(st.vx, st.vy || 0) * 3.6;
+  const lap = (st.lap ?? 0) + 1;
+  let lapT = st.t - (k.lapStarts && k.lapStarts[st.lap] !== undefined ? k.lapStarts[st.lap] : 0);
+  const last = k.lapTimes[st.lap - 1];
+  const lines = [
+    `${k.name}`,
+    `t ${fmt(st.t)} s   Runde ${lap}   Rundenzeit ${fmt(lapT, 2)} s` + (last ? `   letzte ${last.toFixed(2)} s` : ''),
+    `v ${fmt(v)} km/h   s ${fmt(st.s, 0)} m`,
+    `Lenkung ${fmt((st.steer || 0) * 57.3)}°   Gas/Bremse ${fmt(st.throttle, 2)}`,
+  ];
+  for (const key of ['compound', 'tire_wear', 'grip', 'boost', 'in_pit', 'pit_stops']) {
+    if (st[key] !== undefined) lines.push(`${key}: ${typeof st[key] === 'number' ? fmt(st[key], 2) : st[key]}`);
+  }
+  if (k.lapTimes.length) lines.push(`Runden: ${k.lapTimes.map(t => t.toFixed(2)).join(' | ')}  beste ${Math.min(...k.lapTimes).toFixed(2)} s`);
+  if (training) {
+    lines.push('', `TRAINING  ${training.steps.toLocaleString('de-CH')} Schritte   ${training.episodes} Episoden   ${fmt(training.steps_per_s, 0)} Schritte/s`,
+      `Ø Return ${fmt(training.ep_rew_mean, 0)}   beste Rundenzeit ${training.best_lap ? training.best_lap.toFixed(2) + ' s' : '–'}   ${fmt(training.elapsed_s / 60, 1)} min`);
+  }
+  $('hud').textContent = lines.join('\n');
+}
+let training = null;
+
+function computeLapStarts(k) {
+  const starts = [0]; const L = k.traj.lap;
+  for (let i = 1; i < L.length; i++) if (L[i] !== L[i - 1]) starts[L[i]] = k.traj.t[i];
+  k.lapStarts = starts;
+}
+
+// ------------------------------------------------------------------ main loop
+const clock = new THREE.Clock();
+function animate() {
+  requestAnimationFrame(animate);
+  frame(Math.min(clock.getDelta(), 0.1));
+}
+const renderOnce = () => frame(1 / 60);
+function frame(dt) {
+  if (mode === 'replay') {
+    if (playing && karts.length) { tCursor += dt * playSpeed; if (tCursor > maxTime()) tCursor = 0; }
+  }
+  let hudState = null, hudK = karts[hudIndex] || karts[0];
+  for (const k of karts) {
+    const st = mode === 'live' ? (k.traj.t.length ? at(k.traj, k.traj.t.length - 1) : null) : sample(k.traj, tCursor);
+    if (!st) continue;
+    k.group.position.copy(W(st.x, st.y));
+    k.group.rotation.y = st.yaw;
+    if (k.group.userData.frontWheels) for (const w of k.group.userData.frontWheels) w.rotation.y = st.steer || 0;
+    if (k.group.userData.steeringWheel) k.group.userData.steeringWheel.rotation.x = -(st.steer || 0) * 2.5;
+    k.trail.visible = $('showTrail').checked;
+    if (k.trail.visible) {
+      const n = k.traj.t.length; let hi = n;
+      if (mode === 'replay') { hi = 0; while (hi < n && k.traj.t[hi] <= tCursor) hi++; }
+      k.trail.geometry.setDrawRange(0, Math.max(hi, 1));
+    }
+    if (k.group.userData.offMarker) k.group.userData.offMarker.visible = !!st.off_track;
+    if (k === hudK) hudState = st;
+  }
+  if (hudK && hudState) updateCamera(hudK, hudState, dt);
+  hud(hudK, hudState);
+  if (mode === 'replay') { $('time').textContent = `${tCursor.toFixed(1)} s`; if (!scrubbing) $('scrub').value = Math.round(tCursor * 10); }
+  if (lidarLines) lidarLines.visible = $('showLidar').checked && mode === 'live';
+  if (controls.enabled) controls.update();
+  renderer.render(scene, camera);
+}
+
+// ------------------------------------------------------------------ UI wiring
+let scrubbing = false;
+$('scrub').addEventListener('input', e => { scrubbing = true; tCursor = e.target.value / 10; });
+$('scrub').addEventListener('change', () => { scrubbing = false; });
+$('play').addEventListener('click', () => { playing = !playing; $('play').textContent = playing ? '⏸' : '▶'; });
+$('speed').addEventListener('change', e => { playSpeed = parseFloat(e.target.value); });
+$('toggle').addEventListener('click', () => $('panel').classList.toggle('hidden'));
+$('showCenter').addEventListener('change', e => { if (overlays.center) overlays.center.visible = e.target.checked; });
+$('showRaceline').addEventListener('change', e => { if (overlays.raceline) overlays.raceline.visible = e.target.checked; });
+$('hudKart').addEventListener('change', e => { hudIndex = parseInt(e.target.value); });
+$('clearReplays').addEventListener('click', () => { removeKarts(); tCursor = 0; });
+window.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.key === ' ') { e.preventDefault(); $('play').click(); }
+  const cams = { '1': 'chase', '2': 'onboard', '3': 'top', '4': 'free' };
+  if (cams[e.key]) setCamera(cams[e.key]);
+});
+$('modeReplay').addEventListener('click', () => setMode('replay'));
+$('modeLive').addEventListener('click', () => setMode('live'));
+function setMode(m) {
+  if (m === 'live') { for (const k of [...karts]) if (!Object.values(liveKarts).includes(k)) { scene.remove(k.group); scene.remove(k.trail); karts.splice(karts.indexOf(k), 1); } refreshKartList(); }
+  if (m === 'replay') { clearLive(); training = null; }
+  mode = m;
+  $('modeReplay').classList.toggle('active', m === 'replay');
+  $('modeLive').classList.toggle('active', m === 'live');
+  $('replayBox').style.display = m === 'replay' ? '' : 'none';
+  $('liveBox').style.display = m === 'live' ? '' : 'none';
+  $('timeline').style.display = m === 'replay' ? '' : 'none';
+}
+
+function loadReplayObject(name, obj) {
+  const traj = obj.trajectory || obj;
+  if (!traj.t || !traj.x) { status(`${name}: kein gültiges Replay`); return; }
+  const k = addKart(name.replace(/\.json$/, ''), traj, obj.meta || {});
+  computeLapStarts(k);
+  status(`geladen: ${name} (${traj.t.length} Schritte)`);
+}
+$('file').addEventListener('change', async e => {
+  for (const f of e.target.files) loadReplayObject(f.name, JSON.parse(await f.text()));
+});
+$('loadUrl').addEventListener('click', () => loadReplayUrl($('url').value));
+async function loadReplayUrl(url, quiet = false) {
+  try { const r = await fetch(url); if (!r.ok) throw new Error(r.status); loadReplayObject(url.split('/').pop(), await r.json()); }
+  catch (err) { if (!quiet) status(`konnte ${url} nicht laden (${err.message})`); }
+}
+function status(msg) { $('status').textContent = msg; }
+
+// ------------------------------------------------------------------ live mode
+let ws = null, liveKart = null, lidarLines = null;
+$('connect').addEventListener('click', () => {
+  if (ws) { ws.close(); ws = null; $('connect').textContent = 'verbinden'; return; }
+  ws = new WebSocket($('wsUrl').value);
+  ws.onopen = () => { status('verbunden'); $('connect').textContent = 'trennen'; };
+  ws.onclose = () => { status('Verbindung getrennt'); ws = null; training = null; $('connect').textContent = 'verbinden'; };
+  ws.onerror = () => status('Verbindung fehlgeschlagen – läuft der Server? (python -m kart_rl.live.server)');
+  ws.onmessage = ev => handleLive(JSON.parse(ev.data));
+});
+const send = o => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
+$('liveStart').addEventListener('click', () => send({ type: 'control', action: 'start' }));
+$('liveStop').addEventListener('click', () => send({ type: 'control', action: 'stop' }));
+$('liveReset').addEventListener('click', () => { send({ type: 'control', action: 'reset' }); });
+$('policy').addEventListener('change', e => send({ type: 'select_policy', path: e.target.value }));
+$('liveSpeed').addEventListener('change', e => send({ type: 'set_speed', factor: parseFloat(e.target.value) }));
+
+const liveKarts = {};   // id -> kart
+function clearLive() {
+  for (const k of Object.values(liveKarts)) { scene.remove(k.group); scene.remove(k.trail); karts.splice(karts.indexOf(k), 1); }
+  for (const id of Object.keys(liveKarts)) delete liveKarts[id];
+  liveKart = null;
+  refreshKartList();
+}
+function liveKartFor(id, name) {
+  if (liveKarts[id]) return liveKarts[id];
+  const traj = { t: [], x: [], y: [], yaw: [], vx: [], vy: [], steer: [], throttle: [], s: [], lap: [] };
+  const k = addKart(name || `Kart ${id}`, traj, {});
+  k.lapStarts = [0];
+  const marker = new THREE.Mesh(new THREE.SphereGeometry(0.35, 12, 8), new THREE.MeshBasicMaterial({ color: 0xff2020 }));
+  marker.position.y = 1.4; marker.visible = false; k.group.add(marker); k.group.userData.offMarker = marker;
+  liveKarts[id] = k;
+  if (!liveKart) { liveKart = k; hudIndex = karts.indexOf(k); $('hudKart').value = hudIndex; }
+  return k;
+}
+function pushState(k, st) {
+  const tr = k.traj;
+  const n = tr.t.length;
+  if (n && st.t < tr.t[n - 1]) {            // new episode: start a fresh trace
+    for (const key of Object.keys(tr)) tr[key].length = 0;
+    k.trailN = 0; k.lapStarts = [0]; k.lapTimes = [];
+  }
+  for (const key of Object.keys(st)) { if (key === 'id') continue; if (!tr[key]) tr[key] = []; tr[key].push(st[key]); }
+  if (st.lap !== undefined && k.lapStarts[st.lap] === undefined) k.lapStarts[st.lap] = st.t;
+  fillTrail(k);
+}
+function newLiveKart(name) { clearLive(); liveKartFor(0, name); }
+
+function handleLive(m) {
+  if (m.type === 'hello') {
+    $('policy').innerHTML = m.policies.map(p => `<option value="${p}" ${p === m.policy ? 'selected' : ''}>${p}</option>`).join('');
+    buildParams(m.schema);
+    clearLive(); training = null;
+    if (m.mode === 'training') { status(`Training-Stream: ${m.policy}`); setCamera('top'); }
+    else { newLiveKart(m.policy || 'live'); status(`Server: ${m.track}, Policy ${m.policy}`); }
+  } else if (m.type === 'state') {
+    const k = liveKartFor(0, $('policy').value || 'live');
+    pushState(k, m.state);
+    if (m.lap_times) k.lapTimes = m.lap_times;
+    if (m.lidar) drawLidar(m.state, m.lidar);
+  } else if (m.type === 'states') {
+    for (const st of m.states) pushState(liveKartFor(st.id, `Kart ${st.id}`), st);
+    if (m.training) training = m.training;
+  } else if (m.type === 'episode_end') {
+    status(`Episode: ${m.reason}, Runden ${(m.lap_times || []).map(t => t.toFixed(2)).join(', ')}`);
+    refreshKartList();
+  } else if (m.type === 'reset') {
+    for (const k of Object.values(liveKarts)) { for (const key of Object.keys(k.traj)) k.traj[key].length = 0; k.trailN = 0; k.lapStarts = [0]; k.lapTimes = []; }
+  } else if (m.type === 'params') {
+    for (const [key, val] of Object.entries(m.values)) { const el = document.querySelector(`[data-param="${key}"]`); if (el) { el.value = val; el.previousElementSibling.querySelector('b').textContent = Number(val).toFixed(2); } }
+  } else if (m.type === 'policies') {
+    $('policy').innerHTML = m.policies.map(p => `<option value="${p}">${p}</option>`).join('');
+  }
+}
+
+function drawLidar(st, lidar) {
+  if (!lidarLines) {
+    lidarLines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x3fd0ff, transparent: true, opacity: 0.6 }));
+    scene.add(lidarLines);
+  }
+  const pts = [];
+  for (const [ang, d] of lidar) {
+    const a = st.yaw + ang;
+    pts.push(st.x, 0.3, -st.y, st.x + Math.cos(a) * d, 0.3, -(st.y + Math.sin(a) * d));
+  }
+  lidarLines.geometry.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+}
+
+function buildParams(schema) {
+  const box = $('params'); box.innerHTML = '';
+  let group = null;
+  for (const p of schema) {
+    const g = p.key.split('.')[0];
+    if (g !== group) { group = g; const h = document.createElement('div'); h.className = 'small'; h.style.marginTop = '8px'; h.textContent = ({ kart: 'Kart', env: 'Umgebung', tires: 'Reifen', pit: 'Boxenstopp', boost: 'Boost' })[g] || g; box.appendChild(h); }
+    const d = document.createElement('div'); d.className = 'param';
+    d.innerHTML = `<div class="lbl"><span>${p.label}</span><b>${Number(p.value).toFixed(2)}</b></div>` +
+      `<input type="range" data-param="${p.key}" min="${p.min}" max="${p.max}" step="${p.step}" value="${p.value}">`;
+    const inp = d.querySelector('input');
+    inp.addEventListener('input', () => { d.querySelector('b').textContent = Number(inp.value).toFixed(2); });
+    inp.addEventListener('change', () => send({ type: 'set_params', values: { [p.key]: parseFloat(inp.value) } }));
+    box.appendChild(d);
+  }
+  if (!schema.length) box.textContent = '(keine Parameter)';
+}
+
+// ------------------------------------------------------------------ scripting API (scripts/record_viewer.py)
+window.kartViewer = {
+  ready: false,
+  setTime(t) { tCursor = t; playing = false; $('play').textContent = '▶'; renderOnce(); },
+  play(on) { playing = !!on; $('play').textContent = playing ? '⏸' : '▶'; },
+  setCamera(m) { setCamera(m); },
+  setHudKart(i) { hudIndex = i; $('hudKart').value = i; },
+  setPanel(visible) { $('panel').classList.toggle('hidden', !visible); },
+  loadReplay(url) { return loadReplayUrl(url); },
+  connect(url) { $('wsUrl').value = url; if (!ws) $('connect').click(); },
+  karts() { return karts.map(k => ({ name: k.name, steps: k.traj.t.length, lapTimes: k.lapTimes })); },
+  maxTime,
+};
+
+// ------------------------------------------------------------------ start
+(async () => {
+  try {
+    const t = await (await fetch(TRACK_URL)).json();
+    buildTrack(t);
+    try {
+      const rl = await (await fetch(RACELINE_URL)).json();
+      overlays.raceline = polyline(rl.points, 0x3fd0ff, true, 0.04);
+      overlays.raceline.visible = $('showRaceline').checked;
+      scene.add(overlays.raceline);
+    } catch (e) { /* no raceline file */ }
+    $('hud').textContent = 'Strecke geladen. Replay wählen …';
+  } catch (e) {
+    $('hud').textContent = 'Strecke konnte nicht geladen werden.\nDen Viewer über einen HTTP-Server aus dem Repo-Root öffnen:\n  python scripts/serve_viewer.py';
+  }
+  const params = new URLSearchParams(location.search);
+  const urls = params.getAll('replay');
+  for (const u of (urls.length ? urls : DEFAULT_REPLAYS)) await loadReplayUrl(u, true);
+  if (params.get('live') !== null) { setMode('live'); $('connect').click(); }
+  if (params.get('cam')) setCamera(params.get('cam'));
+  if (params.get('panel') === '0') $('panel').classList.add('hidden');
+  window.kartViewer.ready = true;
+  animate();
+})();
+</script>
+</body>
+</html>

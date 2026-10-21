@@ -55,7 +55,7 @@ class Viewer2D:
         self.trail, = self.ax.plot([], [], color="#ffb000", lw=1.0, alpha=0.8, zorder=5)
         self.trail_xy: list[tuple[float, float]] = []
         self.hud = self.ax.text(0.01, 0.99, "", transform=self.ax.transAxes, va="top", ha="left",
-                                color="white", fontsize=10, family="monospace", zorder=20,
+                                color="white", fontsize=10 if figsize[0] >= 7 else 7, family="monospace", zorder=20,
                                 bbox=dict(boxstyle="round", fc="#000000aa", ec="none"))
         self.title = self.ax.set_title(track.name, color="white")
         if interactive:

@@ -47,6 +47,10 @@ class LapEnvConfig:
     stuck_time: float = 5.0           # [s] below 0.5 m/s -> terminate with penalty
     wrong_way_distance: float = 10.0  # [m] driven backwards -> terminate with penalty
     allow_pit: bool = False           # pit lane counts as drivable
+    reward_speed: float = 0.0         # optional per-step bonus: reward_speed * speed / 20 (experiment)
+    sector_length_m: float = 0.0      # > 0: episode = one sector of this length from a random start (curriculum)
+    reward_sector: float = 5.0        # bonus for completing a sector
+    domain_randomization: dict = field(default_factory=dict)  # e.g. {"mu": [0.9, 1.1], "mass": [160, 200]} per episode
     kart: dict = field(default_factory=dict)  # KartParams overrides
     viewer: dict = field(default_factory=dict)  # Viewer2D options (follow, window, figsize, dpi)
 
@@ -119,6 +123,8 @@ class KartLapEnv(gym.Env):
         else:
             s0, lat, speed, yaw_noise = float(options.get("s0", 0.0)), 0.0, float(options.get("speed", 0.0)), 0.0
         x, y, yaw = self.track.start_pose(s0, lat)
+        for key, (lo, hi) in self.cfg.domain_randomization.items():
+            setattr(self.kart.p, key, float(self.np_random.uniform(lo, hi)))
         self.kart.reset(x, y, yaw + yaw_noise, speed)
         self.s, self.lateral, self.idx = self.track.localize(x, y)
         self.lap_start_t = 0.0
@@ -146,9 +152,15 @@ class KartLapEnv(gym.Env):
 
         reward = cfg.reward_progress * ds + cfg.reward_time
         reward -= cfg.reward_steer_change * float((a[0] - self.prev_action[0]) ** 2)
+        if cfg.reward_speed:
+            reward += cfg.reward_speed * self.kart.speed / 20.0
         terminated = False
         truncated = False
         info_extra: dict[str, Any] = {}
+        if cfg.sector_length_m > 0 and self.total_progress >= cfg.sector_length_m:
+            reward += cfg.reward_sector
+            terminated = True
+            info_extra["episode_done"] = "sector"
 
         if crossed_line:
             lap_time = self.t - self.lap_start_t
@@ -225,7 +237,8 @@ class KartLapEnv(gym.Env):
             "t": self.t, "s": self.s, "lateral": self.lateral, "speed": k.speed,
             "total_progress": self.total_progress, "laps_done": self.laps_done,
             "lap_times": list(self.lap_times), "current_lap_time": self.t - self.lap_start_t,
-            "off_track": self.off_track, "x": k.x, "y": k.y, "yaw": k.yaw,
+            "off_track": self.off_track, "x": float(k.x), "y": float(k.y), "yaw": float(k.yaw),
+            "vx": float(k.vx), "vy": float(k.vy), "steer": float(k.steer), "throttle": float(self.prev_action[1]),
         }
 
     def _record(self, action):
@@ -236,6 +249,12 @@ class KartLapEnv(gym.Env):
             "yaw_rate": round(float(k.yaw_rate), 4), "steer": round(float(k.steer), 4),
             "throttle": round(float(action[1]), 3), "s": round(self.s, 2), "lap": self.laps_done,
         })
+
+    def set_config(self, key: str, value):
+        """Change a config value at runtime (used by the curriculum callback)."""
+        if not hasattr(self.cfg, key):
+            raise KeyError(key)
+        setattr(self.cfg, key, value)
 
     def get_trajectory(self) -> dict:
         """Recorded episode as a dict of lists (for replays and the 3D viewer)."""

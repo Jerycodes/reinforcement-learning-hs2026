@@ -60,6 +60,8 @@ def evaluate_lap_time(policy: Policy, env_config: dict | LapEnvConfig | None = N
     cfg = env_config if isinstance(env_config, LapEnvConfig) else LapEnvConfig.from_dict(env_config)
     cfg.random_start = False
     cfg.laps = laps
+    cfg.sector_length_m = 0.0  # always full laps, whatever the training curriculum does
+    cfg.domain_randomization = {}
     cfg.max_time = max_time if max_time else 90.0 * laps
     env = KartLapEnv(cfg)
     return run_episode(env, policy)

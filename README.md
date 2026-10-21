@@ -25,7 +25,7 @@ git clone https://github.com/Jerycodes/reinforcement-learning-hs2026.git
 cd reinforcement-learning-hs2026
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[train,dev]"
-pytest -q                      # ~30 Tests, alles grün = Setup ok
+pytest -q                      # 28 Tests, alles grün = Setup ok
 ```
 
 GPU ist nicht nötig: Das Netz ist klein, die Simulation läuft auf der CPU. Mehr CPU-Kerne =
@@ -34,16 +34,21 @@ schnelleres Training (`n_envs` in der Config anpassen).
 ## Training starten und live zuschauen
 
 ```bash
-# Terminal 1: Training (Stable-Baselines3 PPO)
-python train/train_sb3.py --config train/configs/phase1_ppo.yaml
+# Terminal 1: Training (Stable-Baselines3 PPO) – streamt alle Trainings-Karts an den 3D-Viewer
+python train/train_sb3.py --config train/configs/phase1_ppo.yaml --stream
 
-# Terminal 2: live zuschauen – lädt automatisch immer den neuesten Checkpoint
-python scripts/watch_training.py --run runs/phase1_ppo
-python scripts/watch_training.py --run runs/phase1_ppo --best --follow   # bestes Modell, Verfolgerkamera
+# Terminal 2: 3D-Viewer im Browser (dann http://localhost:8000/viewer/?live -> "verbinden")
+python scripts/serve_viewer.py
 
-# Terminal 3: Lernkurven
+# Alternativ 2D: fährt automatisch mit dem jeweils neuesten Checkpoint
+python scripts/watch_training.py --run runs/phase1_ppo --follow
+
+# Lernkurven
 tensorboard --logdir runs
 ```
+
+Im 3D-Viewer siehst du alle 8 parallelen Trainings-Karts gleichzeitig (Abflüge, Resets, Schritte,
+Episoden, beste Rundenzeit). Details, Replay-Modus und Parameter-Panel: `docs/viewer.md`.
 
 Eigene PPO-Implementierung (gleiche Config, gleiche Umgebung, zum Vergleichen und Verstehen):
 
@@ -77,6 +82,19 @@ python scripts/play_baseline.py --follow                              # Referenz
 Referenz-Rundenzeiten (geskriptete Fahrer, gleiches Kart-Modell): Mittellinie 71.6 s,
 berechnete Ideallinie 54.1 s, theoretisches Modell-Optimum ≈ 49.8 s.
 
+## 3D-Viewer, Video und Experimente
+
+```bash
+python scripts/serve_viewer.py                                   # Replays in 3D (mehrere gleichzeitig)
+python -m kart_rl.live.server --policy runs/phase1_ppo/best.zip --open   # Modell live + Parameter-Regler
+python scripts/make_video.py --run runs/phase1_ppo --grid --out docs/video/evolution_grid.mp4  # Anfang vs. Ende
+python train/train_sb3.py --config train/configs/exp_sector_curriculum.yaml --stream   # Experiment: Episode = Sektor
+python scripts/compare_runs.py                                   # Lernkurven aller Läufe + Tabelle
+```
+
+Alle Experimente (Sektor-Curriculum, Reward-Varianten, Lidar, Domain Randomization, SAC) sind in
+`docs/experimente.md` beschrieben, inkl. Kurzrecherche, was bei Racing-RL üblich ist.
+
 ## Projektstruktur
 
 ```
@@ -89,12 +107,14 @@ kart_rl/                 Python-Paket
   baselines/             geskripteter Referenzfahrer (Pure Pursuit)
   render/viewer2d.py     2D-Viewer (matplotlib)
   evaluation.py, agents.py   Auswertung, Laden von Modellen
+  live/                  Websocket-Streaming (Training) und Live-Server mit Parameter-Panel
   data/                  Streckendaten (JSON + Maske), Ideallinie
+viewer/                  3D-Viewer (Three.js, Browser)
 train/
-  train_sb3.py           Training mit Stable-Baselines3 PPO
+  train_sb3.py           Training mit Stable-Baselines3 (PPO oder SAC), Curriculum, Streaming
   ppo_scratch.py         eigener PPO in PyTorch
-  configs/*.yaml         Trainingskonfigurationen
-scripts/                 evaluate.py, watch_training.py, play_baseline.py
+  configs/*.yaml         Baseline und Experimente
+scripts/                 evaluate.py, watch_training.py, play_baseline.py, serve_viewer.py, make_video.py, compare_runs.py
 tools/                   extract_track.py (Bild → Strecke), compute_raceline.py
 tests/                   pytest
 docs/                    Dokumentation (Deutsch) und Bilder
@@ -107,3 +127,5 @@ runs/                    Trainingsläufe (Checkpoints/TensorBoard sind git-ignor
 - `docs/strecke.md` – Streckenextraktion, Koordinatensystem, Datenformat
 - `docs/simulation.md` – Kart-Modell, Beobachtung, Aktion, Reward, Episoden
 - `docs/ideallinie.md` – berechnete Ideallinie als Vergleich
+- `docs/viewer.md` – 3D-Viewer (Replay, Training live, Live-Server), Video
+- `docs/experimente.md` – Stand der Technik und Experimentplan

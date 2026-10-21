@@ -57,8 +57,10 @@ class VecEnv:
 
     def step(self, actions: np.ndarray):
         obs, rew, term, trunc, final_obs, finished = [], [], [], [], [], []
+        self.infos = []
         for i, (env, a) in enumerate(zip(self.envs, actions)):
             o, r, te, tr, info = env.step(a)
+            self.infos.append(info)
             self.ep_return[i] += r
             self.ep_len[i] += 1
             fo = None
@@ -152,6 +154,8 @@ def main():
     ap.add_argument("--seed", type=int, default=None)
     ap.add_argument("--resume", default=None, help="checkpoint .pt to continue from")
     ap.add_argument("--threads", type=int, default=None, help="torch CPU threads")
+    ap.add_argument("--stream", action="store_true", help="stream all training envs to the 3-D viewer (ws://localhost:8765)")
+    ap.add_argument("--stream-port", type=int, default=8765)
     args = ap.parse_args()
 
     cfg = yaml.safe_load(Path(args.config).read_text())
@@ -227,6 +231,14 @@ def main():
     trunc_buf = np.zeros((n_steps, n_envs), bool)
     final_val_buf = np.zeros((n_steps, n_envs), np.float32)
 
+    streamer = None
+    if args.stream:
+        from kart_rl.live.stream import StateStreamer
+
+        streamer = StateStreamer(port=args.stream_port, hello={"track": "Race-Inn Roggwil",
+                                                               "policy": f"training:{cfg['run_name']}"})
+        print(f"live stream on ws://localhost:{args.stream_port}  ->  open viewer with ?live")
+    n_episodes, recent_returns = 0, []
     t0 = time.time()
     recent = []
     obs = venv.obs
@@ -251,8 +263,21 @@ def main():
                     with torch.no_grad():
                         final_val_buf[t, i] = model.value(torch.as_tensor(fo, dtype=torch.float32)).item()
             recent.extend(finished)
+            n_episodes += len(finished)
+            recent_returns = (recent_returns + [e["return"] for e in finished])[-50:]
             obs = next_obs
             global_step += n_envs
+            if streamer is not None and streamer.connected:
+                from kart_rl.live.stream import env_state_from_info
+
+                streamer.send({"type": "states",
+                               "states": [env_state_from_info(info, i) for i, info in enumerate(venv.infos)],
+                               "training": {"steps": global_step, "episodes": n_episodes,
+                                            "ep_rew_mean": float(np.mean(recent_returns)) if recent_returns else None,
+                                            "best_lap": None if not np.isfinite(best_lap) else float(best_lap),
+                                            "elapsed_s": round(time.time() - t0, 1),
+                                            "steps_per_s": round(global_step / max(time.time() - t0, 1e-6), 1)}},
+                              force=bool(finished))
         with torch.no_grad():
             last_values = model.value(torch.as_tensor(obs, dtype=torch.float32)).numpy()
         adv, ret = compute_gae(rew_buf, val_buf, term_buf, trunc_buf, final_val_buf, last_values, gamma, lam)
