@@ -92,3 +92,84 @@ def test_trajectory_recording():
         env.step(np.array([0.1, 0.5]))
     traj = env.get_trajectory()
     assert len(traj["t"]) == 10 and "x" in traj and "steer" in traj
+
+
+# ---------------------------------------------------------------- track limits / barrier contact
+def _place(env, s0, lat, speed=5.0):
+    """Put the kart at arc length s0 with lateral offset lat (+ = left), heading along the track."""
+    x, y, yaw = env.track.start_pose(s0, lat)
+    env.kart.reset(x, y, yaw, speed)
+    env.s, env.lateral, env.idx = env.track.localize(x, y)
+
+
+def test_body_contact_uses_the_whole_kart():
+    env = KartLapEnv(LapEnvConfig(random_start=False))
+    env.reset(seed=0)
+    s0 = 120.0
+    half_left = float(env.track.half_width_left[env.track.nearest_index(*env.track.point_at(s0))])
+    # centre 0.5 m from the left barrier: the body (0.7 m half width) sticks out -> contact
+    _place(env, s0, half_left - 0.5)
+    _, r, terminated, _, info = env.step([0.0, 0.3])
+    assert info["wall_contact"] and terminated and info["episode_done"] == "off_track"
+    assert r < -10
+    # after the collision handling the kart is drawn at the barrier, not inside it
+    assert info["clearance"] >= 0.0
+    # centre 1.2 m from the barrier: whole body clear -> no contact
+    env.reset(seed=0)
+    _place(env, s0, half_left - 1.2)
+    _, _, terminated, _, info = env.step([0.0, 0.3])
+    assert not info["off_track"] and not terminated and info["clearance"] > 0.3
+
+
+def test_centre_mode_is_the_old_behaviour():
+    env = KartLapEnv(LapEnvConfig(random_start=False, wall_check="centre", off_track_margin=0.4))
+    env.reset(seed=0)
+    s0 = 120.0
+    half_left = float(env.track.half_width_left[env.track.nearest_index(*env.track.point_at(s0))])
+    _place(env, s0, half_left - 0.6)  # centre 0.6 m from the edge: body overlaps, centre mode does not care
+    _, _, terminated, _, info = env.step([0.0, 0.3])
+    assert not info["off_track"] and not terminated
+
+
+def test_penalty_mode_barrier_is_an_obstacle():
+    env = KartLapEnv(LapEnvConfig(random_start=False, off_track_mode="penalty", reward_off_track=-5.0))
+    env.reset(seed=0)
+    s0 = 120.0
+    half_left = float(env.track.half_width_left[env.track.nearest_index(*env.track.point_at(s0))])
+    _place(env, s0, half_left - 0.3, speed=8.0)
+    _, r, terminated, truncated, info = env.step([0.0, 0.5])
+    assert info["wall_contact"] and not terminated and not truncated
+    assert r < -4                                   # penalty applied this step
+    assert info["clearance"] >= 0.05                # pushed back onto the track
+    assert info["speed"] < 8.0                      # lost speed on the barrier
+    assert env.track.on_track(env.kart.x, env.kart.y)
+    for _ in range(40):                             # keep driving straight: never ends up inside the barrier
+        _, _, terminated, truncated, info = env.step([0.0, 1.0])
+        assert env.track.on_track(env.kart.x, env.kart.y)
+        if terminated or truncated:
+            break
+
+
+def test_random_starts_are_clear_of_the_barrier():
+    env = KartLapEnv(LapEnvConfig(random_start=True))
+    for seed in range(30):
+        _, info = env.reset(seed=seed)
+        assert not info["off_track"] and info["clearance"] >= env.cfg.off_track_margin
+
+
+def test_optional_drift_penalty():
+    def reward_while_sliding(reward_drift):
+        env = KartLapEnv(LapEnvConfig(random_start=False, reward_drift=reward_drift, drift_threshold_deg=6.0))
+        env.reset(seed=0)
+        env.kart.state[3], env.kart.state[4] = 10.0, 3.0      # 10 m/s forward, 3 m/s sideways = 16.7° slip
+        _, r, _, _, info = env.step([0.0, 0.0])
+        return r, info["slip_deg"]
+
+    r_off, slip = reward_while_sliding(0.0)
+    r_on, _ = reward_while_sliding(-0.02)
+    assert 10 < slip < 20
+    assert r_on < r_off - 0.1                                # penalty applied only when switched on
+    env = KartLapEnv(LapEnvConfig(random_start=False, reward_drift=-0.02))
+    env.reset(seed=0)
+    _, _, _, _, info = env.step([0.0, 0.5])                  # driving straight: no slip, no penalty
+    assert info["slip_deg"] < 1.0

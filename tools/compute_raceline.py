@@ -34,7 +34,10 @@ def drive(env: KartLapEnv, driver: PurePursuitDriver, record: bool = True):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--track", default="race_inn_roggwil")
-    ap.add_argument("--margin", type=float, default=1.0, help="distance kept from the track edge [m]")
+    ap.add_argument("--margin", type=float, default=1.2,
+                    help="distance the driven line keeps from the barrier [m] (kart half width 0.7 + tracking error)")
+    ap.add_argument("--optimum-margin", type=float, default=0.9,
+                    help="margin of the line used for the theoretical optimum [m] (half width 0.7 + contact margin + slip)")
     ap.add_argument("--iterations", type=int, default=4)
     ap.add_argument("--safety", type=float, default=0.80,
                     help="fraction of the grip used by the driven speed profile (0.92 = theoretical optimum)")
@@ -49,11 +52,13 @@ def main():
     centre = RaceLine.from_track_centerline(track)
     print(f"racing line: {line.length:.1f} m (centreline {track.length:.1f} m), "
           f"max |curvature| {np.abs(line.curvature).max():.3f} vs {np.abs(track.curvature).max():.3f} 1/m")
-    theoretical = RaceLine(line.points, speed_profile(line, safety=0.92))
+    opt_line = RaceLine.compute(track, margin=args.optimum_margin, iterations=args.iterations, safety=0.92)
+    theoretical = RaceLine(opt_line.points, speed_profile(opt_line, safety=0.92))
     print(f"estimated lap times: racing line {line.lap_time_estimate:.2f} s (driven profile), "
           f"{theoretical.lap_time_estimate:.2f} s (theoretical optimum of the model), "
           f"centreline {centre.lap_time_estimate:.2f} s")
     line.meta["theoretical_lap_time_s"] = round(theoretical.lap_time_estimate, 2)
+    line.meta["theoretical_margin_m"] = args.optimum_margin
 
     # drive both lines in the simulator
     env = KartLapEnv(LapEnvConfig(laps=args.laps, random_start=False, max_time=120.0 * args.laps))
@@ -65,8 +70,8 @@ def main():
         best = min(laps[1:]) if len(laps) > 1 else (laps[0] if laps else None)
         results[name] = (info.get("episode_done"), laps, xy, v, best)
         print(f"{name:12s}: {info.get('episode_done')}, lap times {[round(t, 2) for t in laps]}")
-    line.meta["measured_lap_time_s"] = results["Ideallinie"][4]
-    line.meta["centerline_measured_lap_time_s"] = results["Mittellinie"][4]
+    line.meta["measured_lap_time_s"] = round(results["Ideallinie"][4], 2)
+    line.meta["centerline_measured_lap_time_s"] = round(results["Mittellinie"][4], 2)
 
     out = Path(args.out) if args.out else Path(__file__).resolve().parent.parent / "kart_rl" / "data" / f"{args.track}_raceline.json"
     line.save(out)

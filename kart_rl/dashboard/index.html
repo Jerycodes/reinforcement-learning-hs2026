@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kart-RL Experimente</title>
+<style>
+  :root { --bg:#0e1014; --panel:#161a21; --line:#2a303b; --fg:#e8eaf0; --muted:#8b93a3; --acc:#ff5a36; --ok:#3fd0ff; --good:#7cff6b; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.45 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { display:flex; align-items:center; gap:16px; padding:12px 20px; border-bottom:1px solid var(--line); background:var(--panel); position:sticky; top:0; z-index:5; }
+  header h1 { font-size:16px; margin:0; } header .sp { flex:1; } header a, header button { color:var(--fg); }
+  main { display:grid; grid-template-columns: 420px 1fr; gap:18px; padding:18px 20px; }
+  @media (max-width: 1000px) { main { grid-template-columns: 1fr; } }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:16px; }
+  h2 { font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:0 0 10px; }
+  h3 { font-size:13px; margin:14px 0 6px; color:var(--fg); cursor:pointer; user-select:none; }
+  h3::before { content:"▸ "; color:var(--muted); } h3.open::before { content:"▾ "; }
+  .group { display:none; } .group.open { display:block; }
+  label { color:var(--muted); font-size:12px; }
+  input[type=text], input[type=number], select, textarea { width:100%; background:#20252e; color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:6px 8px; font:inherit; }
+  input[type=number] { font-family: ui-monospace, Menlo, monospace; }
+  .param { margin:8px 0 10px; }
+  .param .row { display:flex; gap:8px; align-items:center; }
+  .param .row label { flex:1; color:var(--fg); }
+  .param .row input, .param .row select { width:150px; }
+  .param .row input.changed, .param .row select.changed { border-color:var(--acc); }
+  .help { color:var(--muted); font-size:11.5px; margin-top:3px; }
+  .help b { color:#c8ccd4; font-weight:500; }
+  button { background:#20252e; color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:6px 10px; font:inherit; cursor:pointer; }
+  button:hover { border-color:var(--muted); } button.primary { background:var(--acc); border-color:var(--acc); color:#fff; font-weight:600; padding:9px 14px; }
+  button.small { padding:3px 7px; font-size:12px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:6px 6px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  th { color:var(--muted); font-weight:500; font-size:12px; }
+  td.num { font-family: ui-monospace, Menlo, monospace; }
+  .chip { display:inline-block; padding:1px 6px; border-radius:10px; background:#20252e; color:var(--muted); font-size:11px; margin-right:3px; }
+  .run { color:var(--good); } .done { color:var(--muted); }
+  pre { background:#0b0d11; border:1px solid var(--line); border-radius:8px; padding:10px; max-height:320px; overflow:auto; font-size:11.5px; white-space:pre-wrap; }
+  #msg { margin-top:8px; color:var(--ok); min-height:18px; font-size:13px; }
+  .tips li { margin:4px 0; color:#c8ccd4; }
+  svg text { fill:#aab; font-size:11px; }
+  .inline { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:6px 0; }
+  .inline > div { flex:1; min-width:120px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Kart-RL · Experimente</h1>
+  <span id="hdr" style="color:var(--muted)"></span>
+  <span class="sp"></span>
+  <a href="/viewer/" target="_blank">3D-Viewer (Replay)</a>
+  <a href="https://github.com/Jerycodes/reinforcement-learning-hs2026/blob/main/docs/experimente.md" target="_blank">docs/experimente.md</a>
+</header>
+<main>
+  <section>
+    <div class="card">
+      <h2>Neues Experiment</h2>
+      <div class="inline">
+        <div><label>Name (= Ordner runs/…)</label><input type="text" id="name" placeholder="z. B. exp_lr_1e-4"></div>
+        <div><label>Basis-Config</label><select id="base"></select></div>
+      </div>
+      <div class="inline">
+        <div><label>Trainer</label><select id="trainer">
+          <option value="sb3">Stable-Baselines3 (PPO/SAC)</option>
+          <option value="scratch">eigener PPO (ppo_scratch.py)</option>
+          <option value="pbt">Population Based Training</option></select></div>
+        <div id="algoBox"><label>Algorithmus</label><select id="algo"><option value="ppo">PPO</option><option value="sac">SAC</option></select></div>
+        <div><label>&nbsp;</label><label style="display:flex;gap:6px;align-items:center;color:var(--fg)"><input type="checkbox" id="stream" checked> Live im 3D-Viewer</label></div>
+      </div>
+      <div id="pbtBox" class="inline" style="display:none">
+        <div><label>Worker (parallele Agenten)</label><input type="number" id="pbtWorkers" value="4" min="2" max="16"></div>
+        <div><label>Intervall (Schritte pro Worker bis Vergleich)</label><input type="number" id="pbtInterval" value="250000" step="50000"></div>
+      </div>
+      <div class="inline">
+        <div><label style="display:flex;gap:6px;align-items:center;color:var(--fg)"><input type="checkbox" id="curriculum"> Sektor-Curriculum (80 m → 200 m → 400 m → ganze Runde)</label></div>
+      </div>
+      <div class="inline">
+        <div><label>Weitertrainieren ab (optional: runs/…/last.zip)</label><input type="text" id="resume" placeholder="runs/phase1_long/checkpoints/last.zip"></div>
+        <div style="max-width:140px"><label>zusätzliche Schritte</label><input type="number" id="more" placeholder="10000000" step="1000000"></div>
+      </div>
+      <div id="params"></div>
+      <div style="margin-top:14px; display:flex; gap:10px; align-items:center">
+        <button class="primary" id="start">Experiment starten</button>
+        <button id="reset">Werte zurücksetzen</button>
+      </div>
+      <div id="msg"></div>
+      <div class="help" style="margin-top:8px">Start schreibt die Config nach <b>train/configs/&lt;Name&gt;.yaml</b> (reproduzierbar, pushbar) und startet den Trainer als eigenen Prozess. Orange Rahmen = vom Basiswert abweichend.</div>
+    </div>
+    <div class="card">
+      <h2>Tipps</h2>
+      <ul class="tips" id="tips"></ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="card">
+      <h2>Läufe <span style="color:var(--muted); font-weight:400; text-transform:none; letter-spacing:0">(alle Ordner in runs/, aktualisiert alle 5 s)</span></h2>
+      <table id="runs"><thead><tr>
+        <th>vgl.</th><th>Lauf</th><th>Status</th><th>Schritte</th><th>beste Runde</th><th>1. Runde ab</th><th>Dauer</th><th>Config</th><th></th>
+      </tr></thead><tbody></tbody></table>
+    </div>
+    <div class="card">
+      <h2>Vergleich: Rundenzeit der Evaluation über die Trainingsschritte</h2>
+      <svg id="chart" width="100%" height="320" viewBox="0 0 900 320" preserveAspectRatio="none"></svg>
+      <div class="help" id="chartHelp">Gestrichelt: Ideallinien-Fahrer und Modell-Optimum. Lücken = Evaluation ohne ganze Runde (Bandenkontakt).</div>
+    </div>
+    <div class="card" id="humanCard">
+      <h2>Mensch gegen KI <span class="small" style="text-transform:none; letter-spacing:0; font-weight:normal">(Spiel-Modus: «Selbst fahren» bei einem Lauf)</span></h2>
+      <div id="human" class="help">Noch keine Runden gefahren.</div>
+    </div>
+    <div class="card" id="logCard" style="display:none">
+      <h2>Log <span id="logName" style="text-transform:none; letter-spacing:0"></span> <button class="small" id="logClose" style="float:right">schliessen</button></h2>
+      <pre id="log"></pre>
+    </div>
+    <div class="card" id="cfgCard" style="display:none">
+      <h2>Config <span id="cfgName" style="text-transform:none; letter-spacing:0"></span> <button class="small" id="cfgClose" style="float:right">schliessen</button></h2>
+      <pre id="cfg"></pre>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let SCHEMA = null, BASE = null, CONFIGS = [], selectedRuns = new Set(), logRun = null;
+let REFS = [], DEFAULTS = {};
+const fmtRef = v => String(Math.round(v * 100) / 100);
+const COLORS = ['#ff5a36', '#3fd0ff', '#ffb000', '#7cff6b', '#d36bff', '#ffffff', '#ff8fb0', '#7fd1c8'];
+
+function getPath(o, key, dflt) { let c = o; for (const p of key.split('.')) { if (!c || typeof c !== 'object' || !(p in c)) return dflt; c = c[p]; } return c; }
+function fmtVal(v) { return typeof v === 'number' ? (Number.isInteger(v) ? v.toLocaleString('de-CH') : v) : String(v); }
+
+async function loadSchema() {
+  const d = await (await fetch('/api/schema')).json();
+  SCHEMA = d.schema; BASE = d.base; CONFIGS = d.configs; DEFAULTS = d.defaults || {};
+  const refs = d.references || {};
+  REFS = [];
+  if (refs['Ideallinien-Fahrer']) REFS.push([refs['Ideallinien-Fahrer'], `Ideallinie ${fmtRef(refs['Ideallinien-Fahrer'])}`]);
+  if (refs['Modell-Optimum (Schätzung)']) REFS.push([refs['Modell-Optimum (Schätzung)'], `Optimum ${fmtRef(refs['Modell-Optimum (Schätzung)'])}`]);
+  if (REFS.length) $('chartHelp').textContent = `Gestrichelt: Ideallinien-Fahrer ${fmtRef(REFS[0][0])} s` + (REFS[1] ? ` und Modell-Optimum ${fmtRef(REFS[1][0])} s` : '') + '. Lücken = Evaluation ohne ganze Runde (Bandenkontakt).';
+  $('hdr').textContent = `${d.cpu_count} CPU-Kerne`;
+  $('base').innerHTML = CONFIGS.filter(c => c.config).map(c => `<option value="${c.name}" ${c.name === 'phase1_ppo' ? 'selected' : ''}>${c.name}</option>`).join('');
+  $('tips').innerHTML = d.tips.map(t => `<li>${t}</li>`).join('');
+  buildForm();
+}
+
+function currentBase() { const c = CONFIGS.find(c => c.name === $('base').value); return c ? c.config : BASE; }
+
+function baseValue(key, cfg) {
+  if (key === 'env.domain_randomization') { const v = getPath(cfg, key, {}); return !v || !Object.keys(v).length ? 'aus' : (v.mu && v.mu[0] <= 0.85 ? 'stark' : 'leicht'); }
+  if (key === 'ppo.hidden_sizes') return JSON.stringify(getPath(cfg, key, [256, 256])).replace(/,/g, ', ');
+  if (key === 'env.kart.mu') return getPath(cfg, key, 1.0);
+  if (key === 'env.kart.drive_force_max') return getPath(cfg, key, 720);
+  if (key === 'env.kart.power_max') return getPath(cfg, key, 5300);
+  if (key === 'env.kart.speed_limit') return getPath(cfg, key, 18);
+  const defaults = { 'ppo.log_std_init': -0.5, 'ppo.lr_schedule': 'constant' };
+  const v = getPath(cfg, key, DEFAULTS[key] !== undefined ? DEFAULTS[key] : defaults[key]);
+  return v === undefined || v === null ? '' : v;
+}
+
+function buildForm() {
+  const cfg = currentBase();
+  const box = $('params'); box.innerHTML = '';
+  for (const g of SCHEMA) {
+    const h = document.createElement('h3'); h.textContent = g.group; h.className = g.group === 'Allgemein' ? 'open' : '';
+    const div = document.createElement('div'); div.className = 'group' + (g.group === 'Allgemein' ? ' open' : '');
+    h.addEventListener('click', () => { h.classList.toggle('open'); div.classList.toggle('open'); });
+    for (const it of g.items) {
+      const v = baseValue(it.key, cfg);
+      const p = document.createElement('div'); p.className = 'param';
+      let input;
+      if (it.type === 'choice') input = `<select data-key="${it.key}" data-base="${v}">${it.choices.map(c => `<option value="${c}" ${String(c) === String(v) ? 'selected' : ''}>${c}</option>`).join('')}</select>`;
+      else if (it.type === 'bool') input = `<input type="checkbox" data-key="${it.key}" data-type="bool" data-base="${v}" ${v ? 'checked' : ''} style="width:auto">`;
+      else input = `<input type="number" data-key="${it.key}" data-type="${it.type}" data-base="${v}" value="${v}" min="${it.min}" max="${it.max}" step="${it.step}">`;
+      p.innerHTML = `<div class="row"><label>${it.label}</label>${input}</div><div class="help">${it.help} <b>Basis: ${fmtVal(v)}</b></div>`;
+      div.appendChild(p);
+    }
+    box.appendChild(h); box.appendChild(div);
+  }
+  box.querySelectorAll('[data-key]').forEach(el => el.addEventListener('input', () => markChanged(el)));
+}
+function markChanged(el) {
+  const base = el.dataset.base, val = el.type === 'checkbox' ? String(el.checked) : String(el.value);
+  el.classList.toggle('changed', val !== base);
+}
+function collectValues() {
+  const vals = {};
+  document.querySelectorAll('#params [data-key]').forEach(el => {
+    const base = el.dataset.base;
+    let val = el.type === 'checkbox' ? el.checked : el.value;
+    const changed = (el.type === 'checkbox' ? String(el.checked) : String(el.value)) !== base;
+    if (!changed) return;
+    if (el.dataset.type === 'int') val = parseInt(val);
+    else if (el.dataset.type === 'float') val = parseFloat(val);
+    if (typeof val === 'number' && !Number.isFinite(val)) return;   // empty field: keep the base value
+    vals[el.dataset.key] = val;
+  });
+  return vals;
+}
+
+$('base').addEventListener('change', buildForm);
+$('reset').addEventListener('click', buildForm);
+$('trainer').addEventListener('change', () => {
+  $('pbtBox').style.display = $('trainer').value === 'pbt' ? '' : 'none';
+  $('algoBox').style.display = $('trainer').value === 'sb3' ? '' : 'none';
+});
+$('start').addEventListener('click', async () => {
+  const body = {
+    name: $('name').value, base: $('base').value, trainer: $('trainer').value, algo: $('algo').value,
+    stream: $('stream').checked, values: collectValues(),
+    curriculum: $('curriculum').checked ? [{ at: 0, sector_length_m: 80 }, { at: 400000, sector_length_m: 200 }, { at: 900000, sector_length_m: 400 }, { at: 1400000, sector_length_m: 0 }] : null,
+    extra: { workers: parseInt($('pbtWorkers').value), interval: parseInt($('pbtInterval').value), resume: $('resume').value.trim() || null, more: $('more').value ? parseInt($('more').value) : null },
+  };
+  $('msg').textContent = 'starte …';
+  const tab = body.stream ? openTabLater() : null;
+  const r = await postJson('/api/start', body);
+  if (r.error) { if (tab) tab.cancel(); $('msg').style.color = 'var(--acc)'; $('msg').textContent = r.error; return; }
+  $('msg').style.color = 'var(--ok)';
+  $('msg').innerHTML = `gestartet: <b>${r.name}</b> (PID ${r.pid})` + (r.ws_port ? ` – <a href="/viewer/?live&ws=${r.ws_port}" target="_blank">im 3D-Viewer zuschauen</a>` : '');
+  if (r.ws_port && tab) tab.go(`/viewer/?live&ws=${r.ws_port}`);
+  else if (tab) tab.cancel();
+  selectedRuns.add(r.name);
+  setTimeout(refreshRuns, 1500);
+});
+
+async function refreshRuns() {
+  const runs = await (await fetch('/api/runs')).json();
+  const tb = $('runs').querySelector('tbody'); tb.innerHTML = '';
+  for (const r of runs) {
+    const s = r.summary;
+    const chips = [s.lr != null ? `lr ${Number(s.lr).toExponential(0)}` : null, s.n_envs ? `${s.n_envs} envs` : null, s.gamma ? `γ ${s.gamma}` : null,
+      s.ent != null ? `ent ${s.ent}` : null, s.n_lidar ? `lidar ${s.n_lidar}` : null, s.reward_speed ? `tempo ${s.reward_speed}` : null,
+      s.sector ? `sektor ${s.sector}m` : null, s.curriculum ? 'curriculum' : null, r.trainer !== 'sb3' ? r.trainer : null].filter(Boolean);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><input type="checkbox" ${selectedRuns.has(r.name) ? 'checked' : ''} data-run="${r.name}"></td>
+      <td><b>${r.name}</b></td>
+      <td class="${r.running ? 'run' : 'done'}">${r.running ? '● läuft' : (r.evals ? 'fertig' : '–')}</td>
+      <td class="num">${(r.steps / 1e6).toFixed(2)} Mio</td>
+      <td class="num">${r.best_lap != null ? r.best_lap.toFixed(2) + ' s' : '–'}</td>
+      <td class="num">${r.first_lap_steps != null ? (r.first_lap_steps / 1e6).toFixed(1) + ' Mio' : '–'}</td>
+      <td class="num">${r.wall_min ? r.wall_min + ' min' : '–'}</td>
+      <td>${chips.map(c => `<span class="chip">${c}</span>`).join('')}</td>
+      <td style="white-space:nowrap">
+        ${r.running && r.ws_port ? `<a href="/viewer/?live&ws=${r.ws_port}" target="_blank"><button class="small">3D live</button></a>` : ''}
+        ${r.best_file ? `<button class="small" data-view="${r.name}">Modell ansehen</button><button class="small" data-game="${r.name}" title="mit der Tastatur gegen dieses Modell fahren">Selbst fahren</button>` : ''}
+        <button class="small" data-log="${r.name}">Log</button>
+        <button class="small" data-cfg="${r.name}">Config</button>
+        ${r.running ? `<button class="small" data-stop="${r.name}" style="color:var(--acc)">Stop</button>` : ''}
+      </td>`;
+    tb.appendChild(tr);
+  }
+  tb.querySelectorAll('[data-run]').forEach(cb => cb.addEventListener('change', () => { cb.checked ? selectedRuns.add(cb.dataset.run) : selectedRuns.delete(cb.dataset.run); drawChart(); }));
+  tb.querySelectorAll('[data-log]').forEach(b => b.addEventListener('click', () => showLog(b.dataset.log)));
+  tb.querySelectorAll('[data-cfg]').forEach(b => b.addEventListener('click', () => showCfg(b.dataset.cfg)));
+  tb.querySelectorAll('[data-stop]').forEach(b => b.addEventListener('click', async () => { if (confirm(`${b.dataset.stop} stoppen? (speichert last.zip)`)) { await fetch('/api/stop', { method: 'POST', body: JSON.stringify({ name: b.dataset.stop }) }); setTimeout(refreshRuns, 1500); } }));
+  tb.querySelectorAll('[data-game]').forEach(b => b.addEventListener('click', async () => {
+    let driver = ''; try { driver = (localStorage.getItem('driverName') || '').trim(); } catch (e) {}
+    const tab = openTabLater();
+    const r = await postJson('/api/game', { name: b.dataset.game, driver });
+    if (r.error) { tab.cancel(); alert(r.error); return; }
+    tab.go(`/viewer/?game&ws=${r.ws_port}`, 2500);
+    $('msg').style.color = 'var(--ok)'; $('msg').innerHTML = `Spiel gegen <b>${b.dataset.game}</b> startet – <a href="/viewer/?game&ws=${r.ws_port}" target="_blank">Viewer (Spiel)</a>. Pfeiltasten/WASD fahren, R = Neustart. Runden landen unten bei «Mensch gegen KI».`;
+  }));
+  tb.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', async () => {
+    const tab = openTabLater();
+    const r = await postJson('/api/view', { name: b.dataset.view });
+    if (r.error) { tab.cancel(); alert(r.error); return; }
+    tab.go(`/viewer/?live&ws=${r.ws_port}`, 2500);
+    $('msg').style.color = 'var(--ok)'; $('msg').innerHTML = `Live-Server für <b>${b.dataset.view}</b> startet – <a href="/viewer/?live&ws=${r.ws_port}" target="_blank">Viewer (live)</a> (Policy-Auswahl und Regler im Panel).`;
+  }));
+  drawChart();
+  refreshHuman();
+  if (logRun) showLog(logRun, true);
+}
+
+function openTabLater() {
+  // Safari/Chrome only allow window.open inside the click itself: open an empty tab now, fill it later.
+  let w = null;
+  try { w = window.open('', '_blank'); } catch (e) { w = null; }
+  return {
+    go(url, delayMs = 0) { if (!w) { location.href = url; return; } w.document.write('<title>3D-Viewer</title><body style="background:#111;color:#ccc;font:14px sans-serif;padding:20px">Server startet … der Viewer lädt gleich.</body>'); setTimeout(() => { w.location.href = url; }, delayMs); },
+    cancel() { if (w) w.close(); },
+  };
+}
+
+async function postJson(url, body) {
+  try {
+    const resp = await fetch(url, { method: 'POST', body: JSON.stringify(body) });
+    const text = await resp.text();
+    try { return JSON.parse(text); }
+    catch (e) { return { error: `${url} antwortet nicht (HTTP ${resp.status}). Das Dashboard läuft vermutlich noch mit altem Code: im Terminal Ctrl+C und "python -m kart_rl.dashboard" neu starten.` }; }
+  } catch (e) { return { error: `Dashboard nicht erreichbar (${e.message})` }; }
+}
+
+async function refreshHuman() {
+  const d = await (await fetch('/api/human')).json();
+  if (!d.rows.length) { $('human').textContent = 'Noch keine Runden gefahren. «Selbst fahren» bei einem Lauf klicken – Pfeiltasten/WASD, gleiche Physik und Bande wie die KI.'; return; }
+  const rows = d.rows.map(e => `<tr><td><b>${e.driver}</b></td><td>${e.ghost.replace('runs/', '').replace('/best.zip', '')}</td><td>${e.laps} (${e.valid} gültig)</td><td>${e.best != null ? e.best.toFixed(2) + ' s' : '–'}</td><td>${e.ghost_best != null ? e.ghost_best.toFixed(2) + ' s' : '–'}</td><td>${e.best != null && e.ghost_best != null ? (e.best < e.ghost_best ? '<span style="color:var(--ok)">du bist schneller (' + (e.best - e.ghost_best).toFixed(2) + ' s)</span>' : 'KI schneller (+' + (e.best - e.ghost_best).toFixed(2) + ' s)') : '–'}</td></tr>`).join('');
+  $('human').innerHTML = `<table><thead><tr><th>Fahrer</th><th>gegen Modell</th><th>Runden</th><th>beste gültige</th><th>KI beste</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="help">${d.n_laps} Runden in runs/human/laps.csv, ${d.demos.length} Aufzeichnung(en) in replays/human/ (im 3D-Viewer als Replay ladbar: <code>…_du.json</code> gegen <code>…_KI.json</code>).
+    Zusatz «Lernen vom Menschen»: <code>python train/learn_from_human.py --model runs/&lt;lauf&gt;/best.zip --out runs/&lt;lauf&gt;_human</code> klont deine Runden, die schneller als die KI waren, in die Policy; danach «Weitertrainieren ab runs/&lt;lauf&gt;_human/checkpoints/last.zip».</div>`;
+}
+
+async function drawChart() {
+  const svg = $('chart'); const W = 900, H = 320, L = 50, R = 12, T = 12, B = 30;
+  const series = [];
+  for (const name of selectedRuns) {
+    const ev = await (await fetch('/api/eval/' + name)).json();
+    series.push({ name, pts: ev.filter(e => e.lap != null) });
+  }
+  const allX = series.flatMap(s => s.pts.map(p => p.steps)), allY = series.flatMap(s => s.pts.map(p => p.lap));
+  const xmax = Math.max(1e6, ...allX), ymin = Math.min(49, ...allY) - 1, ymax = Math.min(80, Math.max(56, ...allY) + 1);
+  const X = x => L + (x / xmax) * (W - L - R), Y = y => T + (1 - (y - ymin) / (ymax - ymin)) * (H - T - B);
+  let out = '';
+  for (let i = 0; i <= 5; i++) { const y = ymin + (ymax - ymin) * i / 5; out += `<line x1="${L}" x2="${W - R}" y1="${Y(y)}" y2="${Y(y)}" stroke="#2a303b"/><text x="4" y="${Y(y) + 4}">${y.toFixed(0)} s</text>`; }
+  for (let i = 0; i <= 6; i++) { const x = xmax * i / 6; out += `<text x="${X(x) - 12}" y="${H - 10}">${(x / 1e6).toFixed(1)}M</text>`; }
+  for (const [ref, lbl] of REFS) if (ref > ymin && ref < ymax) out += `<line x1="${L}" x2="${W - R}" y1="${Y(ref)}" y2="${Y(ref)}" stroke="#666" stroke-dasharray="4 4"/><text x="${W - R - 90}" y="${Y(ref) - 3}">${lbl}</text>`;
+  series.forEach((s, i) => {
+    const c = COLORS[i % COLORS.length];
+    if (s.pts.length) out += `<polyline fill="none" stroke="${c}" stroke-width="1.6" points="${s.pts.map(p => `${X(p.steps)},${Y(p.lap)}`).join(' ')}"/>`;
+    out += `<rect x="${L + 10 + i * 150}" y="${T + 4}" width="10" height="10" fill="${c}"/><text x="${L + 24 + i * 150}" y="${T + 13}">${s.name}</text>`;
+  });
+  svg.innerHTML = out;
+}
+
+async function showLog(name, quiet) {
+  logRun = name; $('logCard').style.display = ''; $('logName').textContent = name;
+  const d = await (await fetch('/api/log/' + name)).json();
+  $('log').textContent = d.log; if (!quiet) $('log').scrollTop = 1e9;
+}
+async function showCfg(name) {
+  $('cfgCard').style.display = ''; $('cfgName').textContent = name;
+  const d = await (await fetch('/api/config/' + name)).json(); $('cfg').textContent = d.yaml || '(keine config.yaml)';
+}
+$('logClose').addEventListener('click', () => { $('logCard').style.display = 'none'; logRun = null; });
+$('cfgClose').addEventListener('click', () => { $('cfgCard').style.display = 'none'; });
+
+loadSchema().then(refreshRuns);
+setInterval(refreshRuns, 5000);
+</script>
+</body>
+</html>

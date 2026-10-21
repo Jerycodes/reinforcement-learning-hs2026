@@ -47,6 +47,7 @@
   <div class="row">
     <button id="modeReplay" class="active">Replay</button>
     <button id="modeLive">Live</button>
+    <button id="modeGame">Spiel</button>
   </div>
 
   <div id="replayBox">
@@ -61,6 +62,14 @@
     <h3>Live (Python-Server)</h3>
     <div class="row"><input type="text" id="wsUrl" value="ws://localhost:8765" style="flex:1"><button id="connect">verbinden</button></div>
     <div id="trainingInfo" class="small" style="display:none; margin:6px 0">Training läuft. Das Kart fährt den <b>aktuellen Trainingsstand</b> (deterministisch, ohne Erkundungsrauschen) in Echtzeit; nach jedem Update fährt es mit der neuen Policy weiter. Policy wechseln und Parameter geht im Live-Server-Modus (<code>python -m kart_rl.live.server</code>).</div>
+    <div id="gameBox" style="display:none">
+      <div class="small" style="margin:6px 0">Du fährst gegen das Modell (halbtransparenter Geist, keine Kollision). Gleiche Physik, gleiche Bande: Kontakt kostet Tempo und macht die Runde ungültig.<br>
+      <b>Pfeiltasten / WASD</b> = lenken, Gas, Bremse · <b>Backspace</b> = zurück auf die Strecke · <b>R</b> = Neustart · <b>1–4</b> = Kamera</div>
+      <div class="row"><label>Name</label><input type="text" id="driverName" placeholder="dein Name" style="flex:1"><button id="setName">ok</button></div>
+      <div class="row"><label>Gegner</label><select id="ghostPolicy" style="flex:1"></select></div>
+      <div class="row"><button id="gameReset">Neustart (R)</button></div>
+      <div id="gameLaps" class="small"></div>
+    </div>
     <div id="serverControls">
       <div class="row">
         <button id="liveStart">Start</button><button id="liveStop">Stop</button><button id="liveReset">Reset</button>
@@ -409,12 +418,18 @@ function hud(k, st) {
     `${k.name}`,
     `t ${fmt(st.t)} s   Runde ${lap}   Rundenzeit ${fmt(lapT, 2)} s` + (last ? `   letzte ${last.toFixed(2)} s` : ''),
     `v ${fmt(v)} km/h   s ${fmt(st.s, 0)} m`,
-    `Lenkung ${fmt((st.steer || 0) * 57.3)}°   Gas/Bremse ${fmt(st.throttle, 2)}`,
+    `Lenkung ${fmt((st.steer || 0) * 57.3)}°   Gas/Bremse ${fmt(st.throttle, 2)}   Drift ${fmt(Math.abs(st.vx) > 1 ? Math.abs(Math.atan2(st.vy || 0, st.vx)) * 57.3 : 0)}°`,
   ];
   for (const key of ['compound', 'tire_wear', 'grip', 'boost', 'in_pit', 'pit_stops']) {
     if (st[key] !== undefined) lines.push(`${key}: ${typeof st[key] === 'number' ? fmt(st[key], 2) : st[key]}`);
   }
   if (k.lapTimes.length) lines.push(`Runden: ${k.lapTimes.map(t => t.toFixed(2)).join(' | ')}  beste ${Math.min(...k.lapTimes).toFixed(2)} s`);
+  if (game && game.du) {
+    if (game.countdown > 0) lines.push('', `START IN ${Math.ceil(game.countdown)} …`);
+    const g = (h) => `Runde ${h.lap}  aktuell ${fmt(h.current, 2)} s  letzte ${h.last != null ? fmt(h.last, 2) + (h.last_valid === false ? '*' : '') : '–'}  beste ${h.best != null ? fmt(h.best, 2) : '–'}`;
+    lines.push('', `DU   ${g(game.du)}${game.du.contact ? '   BANDENKONTAKT – Runde ungültig' : ''}`, `KI   ${g(game.ki)}`);
+    if (game.delta !== undefined) lines.push(`Δ beste Runde ${game.delta > 0 ? '+' : ''}${game.delta.toFixed(2)} s ${game.delta > 0 ? '(KI schneller)' : '(du bist schneller!)'}`);
+  }
   if (training) {
     const head = training.finished ? 'TRAINING FERTIG' : 'TRAINING';
     const gen = training.generation ? `   Generation ${training.generation}` : '';
@@ -448,7 +463,7 @@ function frame(dt) {
   }
   let hudState = null, hudK = karts[hudIndex] || karts[0];
   for (const k of karts) {
-    const st = mode === 'live' ? (k.traj.t.length ? at(k.traj, k.traj.t.length - 1) : null) : sample(k.traj, tCursor);
+    const st = (mode === 'live' || mode === 'game') ? (k.traj.t.length ? at(k.traj, k.traj.t.length - 1) : null) : sample(k.traj, tCursor);
     if (!st) continue;
     k.group.position.copy(W(st.x, st.y));
     k.group.rotation.y = st.yaw;
@@ -467,6 +482,7 @@ function frame(dt) {
   hud(hudK, hudState);
   if (mode === 'replay') { $('time').textContent = `${tCursor.toFixed(1)} s`; if (!scrubbing) $('scrub').value = Math.round(tCursor * 10); }
   if (lidarLines) lidarLines.visible = $('showLidar').checked && mode === 'live';
+  if (game) { const gk = liveKarts['du']; if (gk && gk !== karts[hudIndex]) { hudIndex = karts.indexOf(gk); $('hudKart').value = hudIndex; } }
   if (controls.enabled) controls.update();
   renderer.render(scene, camera);
 }
@@ -484,20 +500,24 @@ $('hudKart').addEventListener('change', e => { hudIndex = parseInt(e.target.valu
 $('clearReplays').addEventListener('click', () => { removeKarts(); tCursor = 0; });
 window.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
-  if (e.key === ' ') { e.preventDefault(); $('play').click(); }
+  if (e.key === ' ') { e.preventDefault(); if (mode === 'replay') $('play').click(); }
   const cams = { '1': 'chase', '2': 'onboard', '3': 'top', '4': 'free' };
   if (cams[e.key]) setCamera(cams[e.key]);
 });
 $('modeReplay').addEventListener('click', () => setMode('replay'));
 $('modeLive').addEventListener('click', () => setMode('live'));
+$('modeGame').addEventListener('click', () => setMode('game'));
 function setMode(m) {
-  if (m === 'live') { for (const k of [...karts]) if (!Object.values(liveKarts).includes(k)) { scene.remove(k.group); scene.remove(k.trail); karts.splice(karts.indexOf(k), 1); } refreshKartList(); }
-  if (m === 'replay') { clearLive(); training = null; }
+  if (m === 'live' || m === 'game') { for (const k of [...karts]) if (!Object.values(liveKarts).includes(k)) { scene.remove(k.group); scene.remove(k.trail); karts.splice(karts.indexOf(k), 1); } refreshKartList(); }
+  if (m === 'replay') { clearLive(); training = null; game = null; }
   mode = m;
   $('modeReplay').classList.toggle('active', m === 'replay');
   $('modeLive').classList.toggle('active', m === 'live');
+  $('modeGame').classList.toggle('active', m === 'game');
   $('replayBox').style.display = m === 'replay' ? '' : 'none';
-  $('liveBox').style.display = m === 'live' ? '' : 'none';
+  $('liveBox').style.display = (m === 'live' || m === 'game') ? '' : 'none';
+  $('gameBox').style.display = m === 'game' ? '' : 'none';
+  if (m !== 'game') $('serverControls').style.display = '';
   $('timeline').style.display = m === 'replay' ? '' : 'none';
 }
 
@@ -520,13 +540,26 @@ function status(msg) { $('status').textContent = msg; }
 
 // ------------------------------------------------------------------ live mode
 let ws = null, liveKart = null, lidarLines = null;
-$('connect').addEventListener('click', () => {
-  if (ws) { ws.close(); ws = null; $('connect').textContent = 'verbinden'; return; }
+let retryUntil = 0, retryTimer = null;   // auto-reconnect while a freshly started trainer/server is still booting
+function connectLive() {
+  clearTimeout(retryTimer);
+  let opened = false;
   ws = new WebSocket($('wsUrl').value);
-  ws.onopen = () => { status('verbunden'); $('connect').textContent = 'trennen'; };
-  ws.onclose = () => { status('Verbindung getrennt'); ws = null; training = null; $('connect').textContent = 'verbinden'; };
-  ws.onerror = () => status('Verbindung fehlgeschlagen – läuft der Server? (python -m kart_rl.live.server)');
+  ws.onopen = () => { opened = true; retryUntil = 0; status('verbunden'); $('connect').textContent = 'trennen'; };
+  ws.onclose = () => {
+    ws = null; training = null; $('connect').textContent = 'verbinden';
+    if (!opened && Date.now() < retryUntil) {
+      status(`Server startet noch – verbinde erneut … (${Math.ceil((retryUntil - Date.now()) / 1000)} s)`);
+      retryTimer = setTimeout(connectLive, 2000);
+    } else status(opened ? 'Verbindung getrennt' : 'Verbindung fehlgeschlagen – läuft der Server? (Dashboard: Log des Laufs prüfen)');
+  };
+  ws.onerror = () => {};
   ws.onmessage = ev => handleLive(JSON.parse(ev.data));
+}
+$('connect').addEventListener('click', () => {
+  if (ws) { retryUntil = 0; clearTimeout(retryTimer); ws.close(); ws = null; $('connect').textContent = 'verbinden'; return; }
+  retryUntil = Date.now() + 15000;
+  connectLive();
 });
 const send = o => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
 $('liveStart').addEventListener('click', () => send({ type: 'control', action: 'start' }));
@@ -571,10 +604,19 @@ function handleLive(m) {
     $('policy').innerHTML = m.policies.map(p => `<option value="${p}" ${p === m.policy ? 'selected' : ''}>${p}</option>`).join('');
     buildParams(m.schema);
     clearLive(); training = null;
-    const isTraining = m.mode === 'training';
-    $('serverControls').style.display = isTraining ? 'none' : '';
+    const isTraining = m.mode === 'training', isGame = m.mode === 'game';
+    if (isGame && mode !== 'game') setMode('game');
+    $('serverControls').style.display = (isTraining || isGame) ? 'none' : '';
     $('trainingInfo').style.display = isTraining ? '' : 'none';
-    if (isTraining) { newLiveKart('aktueller Trainingsstand'); status(`Training: ${m.policy}`); setCamera('chase'); }
+    if (isGame) {
+      game = { driver: m.driver, policy: m.policy };
+      $('ghostPolicy').innerHTML = m.policies.map(p => `<option value="${p}" ${p === m.policy ? 'selected' : ''}>${p}</option>`).join('');
+      let stored = ''; try { stored = localStorage.getItem('driverName') || ''; } catch (e) {}
+      if (!$('driverName').value) $('driverName').value = m.driver !== 'du' ? m.driver : stored;
+      if (m.driver === 'du' && stored) { send({ type: 'set_name', name: stored }); game.driver = stored; }
+      status(`Spiel gegen ${m.policy.split('/').slice(-2, -1)[0] || m.policy} – Pfeiltasten/WASD fahren, R = Neustart`); setCamera('chase');
+    }
+    else if (isTraining) { newLiveKart('aktueller Trainingsstand'); status(`Training: ${m.policy}`); setCamera('chase'); }
     else { newLiveKart(m.policy || 'live'); status(`Server: ${m.track}, Policy ${m.policy}`); }
   } else if (m.type === 'state') {
     const k = liveKartFor(0, $('policy').value || 'live');
@@ -583,8 +625,10 @@ function handleLive(m) {
     if (m.training) training = m.training;
     if (m.lidar) drawLidar(m.state, m.lidar);
   } else if (m.type === 'states') {
+    if (m.game) { game = { ...game, ...m.game }; renderGameLaps(); }
     for (const st of m.states) {
-      const k = liveKartFor(st.id, `Training-Env ${st.id}`);
+      const k = liveKartFor(st.id, m.game ? (st.id === 'du' ? (m.game.driver === 'du' ? 'du' : m.game.driver) : `KI: ${m.game.policy.split('/').slice(-2).join('/')}`) : `Training-Env ${st.id}`);
+      if (st.ghost && !k.isGhost) makeGhost(k);
       if (st.hist && st.hist.length) {   // intermediate positions since the last message -> smooth trail
         for (const [t, x, y, v] of st.hist) {
           if (t >= st.t) continue;
@@ -594,17 +638,59 @@ function handleLive(m) {
       pushState(k, st);
     }
     if (m.training) training = m.training;
+  } else if (m.type === 'lap') {
+    const who = m.who === 'du' ? 'Du' : 'KI';
+    status(`${who}: Runde ${m.lap_time.toFixed(2)} s${m.valid ? '' : ' (Bandenkontakt, ungültig)'}` + (m.best_du && m.best_ki ? ` – beste: du ${m.best_du.toFixed(2)} / KI ${m.best_ki.toFixed(2)}` : ''));
   } else if (m.type === 'episode_end') {
     status(`Episode: ${m.reason}, Runden ${(m.lap_times || []).map(t => t.toFixed(2)).join(', ')}`);
     refreshKartList();
   } else if (m.type === 'reset') {
     for (const k of Object.values(liveKarts)) { for (const key of Object.keys(k.traj)) k.traj[key].length = 0; k.trailN = 0; k.lapStarts = [0]; k.lapTimes = []; }
+    if (game) { game.du = null; game.ki = null; game.delta = undefined; renderGameLaps(); }
   } else if (m.type === 'params') {
     for (const [key, val] of Object.entries(m.values)) { const el = document.querySelector(`[data-param="${key}"]`); if (el) { el.value = val; el.previousElementSibling.querySelector('b').textContent = Number(val).toFixed(2); } }
   } else if (m.type === 'policies') {
     $('policy').innerHTML = m.policies.map(p => `<option value="${p}">${p}</option>`).join('');
   }
 }
+
+// ------------------------------------------------------------------ game mode
+let game = null;
+const heldKeys = { left: false, right: false, up: false, down: false };
+const KEYMAP = { ArrowLeft: 'left', a: 'left', A: 'left', ArrowRight: 'right', d: 'right', D: 'right', ArrowUp: 'up', w: 'up', W: 'up', ArrowDown: 'down', s: 'down', S: 'down' };
+function sendKeys() { send({ type: 'keys', ...heldKeys }); }
+window.addEventListener('keydown', e => {
+  if (mode !== 'game') return;
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') {
+    if (!e.key.startsWith('Arrow')) return;   // typing in a field; arrow keys always drive
+    e.target.blur();
+  }
+  const k = KEYMAP[e.key];
+  if (k) { e.preventDefault(); if (!heldKeys[k]) { heldKeys[k] = true; sendKeys(); } }
+  if (e.key === 'r' || e.key === 'R') send({ type: 'control', action: 'reset' });
+  if (e.key === 'Backspace') { e.preventDefault(); send({ type: 'control', action: 'respawn' }); }
+});
+window.addEventListener('keyup', e => {
+  const k = KEYMAP[e.key];
+  if (k && heldKeys[k]) { heldKeys[k] = false; if (mode === 'game') sendKeys(); }
+});
+window.addEventListener('blur', () => { for (const k in heldKeys) heldKeys[k] = false; if (mode === 'game') sendKeys(); });
+function makeGhost(k) {
+  k.isGhost = true;
+  k.group.traverse(o => { if (o.isMesh) { o.material = o.material.clone(); o.material.transparent = true; o.material.opacity = 0.4; o.castShadow = false; } });
+  if (k.trail && k.trail.material) { k.trail.material.transparent = true; k.trail.material.opacity = 0.35; }
+}
+function renderGameLaps() {
+  if (!game) return;
+  const row = (who, h) => h ? `<tr><td><b>${who}</b></td><td>${h.lap}</td><td>${fmt(h.current, 2)}</td><td>${h.last != null ? fmt(h.last, 2) + (h.last_valid === false ? '*' : '') : '–'}</td><td>${h.best != null ? fmt(h.best, 2) : '–'}</td></tr>` : '';
+  const delta = game.delta !== undefined ? `<div style="margin-top:4px">Δ beste Runde: <b>${game.delta > 0 ? '+' : ''}${game.delta.toFixed(2)} s</b> ${game.delta > 0 ? '(KI schneller)' : game.delta < 0 ? '(du bist schneller!)' : ''}</div>` : '';
+  $('gameLaps').innerHTML = `<table style="width:100%;border-collapse:collapse;margin-top:6px"><tr><th></th><th>Runde</th><th>aktuell</th><th>letzte</th><th>beste</th></tr>${row(game.driver && game.driver !== 'du' ? game.driver : 'Du', game.du)}${row('KI', game.ki)}</table>${delta}<div class="small" style="opacity:.7">* = Bandenkontakt, zählt nicht. Alle Runden landen in runs/human/laps.csv, Replays in replays/human/.</div>`;
+}
+$('setName').addEventListener('click', () => { const n = $('driverName').value.trim(); if (n) { send({ type: 'set_name', name: n }); if (game) { game.driver = n; } try { localStorage.setItem('driverName', n); } catch (e) {} } $('driverName').blur(); $('setName').blur(); status('Name gesetzt – Pfeiltasten/WASD fahren (Klick in die 3D-Ansicht, falls nichts passiert)'); });
+$('driverName').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('setName').click(); } });
+renderer.domElement.addEventListener('mousedown', () => { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); });
+$('ghostPolicy').addEventListener('change', e => send({ type: 'select_policy', path: e.target.value }));
+$('gameReset').addEventListener('click', () => send({ type: 'control', action: 'reset' }));
 
 function drawLidar(st, lidar) {
   if (!lidarLines) {
@@ -669,7 +755,8 @@ window.kartViewer = {
   const urls = params.getAll('replay');
   for (const u of (urls.length ? urls : DEFAULT_REPLAYS)) await loadReplayUrl(u, true);
   if (params.get('ws')) $('wsUrl').value = `ws://localhost:${params.get('ws')}`;
-  if (params.get('live') !== null) { setMode('live'); $('connect').click(); }
+  if (params.get('live') !== null) { setMode('live'); retryUntil = Date.now() + 90000; connectLive(); }
+  if (params.get('game') !== null) { setMode('game'); retryUntil = Date.now() + 90000; connectLive(); }
   if (params.get('cam')) setCamera(params.get('cam'));
   if (params.get('panel') === '0') $('panel').classList.add('hidden');
   window.kartViewer.ready = true;

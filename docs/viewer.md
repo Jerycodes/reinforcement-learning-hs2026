@@ -43,6 +43,77 @@ python -m kart_rl.live.server --policy runs/phase1_ppo/best.zip --open
 python -m kart_rl.live.server --policy baseline:raceline --speed 2
 ```
 
+### 4. Experiment-Dashboard (Parameter wählen, Experimente starten und vergleichen)
+
+```bash
+python -m kart_rl.dashboard            # öffnet http://localhost:8080/
+```
+
+Das Dashboard ist eine lokale Webseite (nur Python-Standardbibliothek, kein Login), über die man
+Experimente ohne Terminal startet und vergleicht:
+
+- **Neues Experiment**: Name, Basis-Config (z. B. `phase1_ppo` oder ein früheres Experiment),
+  Trainer (Stable-Baselines3, eigener PPO, PBT), Algorithmus (PPO/SAC), Live-3D ja/nein,
+  optional Sektor-Curriculum oder Weitertrainieren ab Checkpoint.
+- **Parameter** in vier Gruppen (Allgemein, PPO, Umgebung/Reward, Kart-Physik), jeder mit kurzer
+  Erklärung und dem Basiswert; geänderte Felder werden orange markiert. Nur die Änderungen werden
+  übernommen, der Rest kommt aus der Basis-Config.
+- Beim Start wird `train/configs/<name>.yaml` geschrieben (= reproduzierbar, kann gepusht werden)
+  und der Trainer als eigener Prozess gestartet; das Log landet in `runs/<name>/train.log`.
+  Das Dashboard darf man schliessen, die Trainings laufen weiter; *Stop* beendet sauber (Ctrl+C,
+  `checkpoints/last.zip` wird geschrieben).
+- **Läufe**: alle Ordner unter `runs/` mit Status, Schritten, bester Rundenzeit, wann die erste
+  volle Runde geschafft wurde, Dauer und den wichtigsten Config-Werten. Pro Lauf: *3D live*
+  (Training zuschauen), *Modell ansehen* (startet den Live-Server mit Policy-Auswahl und Reglern),
+  *Log*, *Config*, *Stop*.
+- **Vergleich**: Häkchen bei mehreren Läufen → Lernkurven (beste Rundenzeit über Schritte) mit den
+  Referenzlinien Ideallinien-Fahrer und Modell-Optimum (aus `kart_rl/data/race_inn_roggwil_raceline.json`). Dieselbe Tabelle gibt es als Skript
+  (`python scripts/compare_runs.py`).
+
+Für die Gruppe: Jeder startet das Dashboard lokal auf seinem Rechner. Ergebnisse teilen =
+`train/configs/<name>.yaml`, `runs/<name>/eval.csv`, `runs/<name>/best.zip` und `config.yaml`
+committen (Checkpoints und TensorBoard-Logs sind git-ignoriert). Nach `git pull` erscheinen die
+Läufe der anderen in der Tabelle und im Vergleichs-Chart, und ihre Configs stehen als Basis für
+neue Experimente zur Auswahl.
+
+Ports: Dashboard 8080 (`--port` ändert das), Live-Streams ab 8765 aufwärts (pro gestartetem
+Lauf einer). Ein separat gestarteter `kart_rl.live.server` oder ein Training mit `--stream`
+belegt 8765 ebenfalls – dann vorher beenden.
+
+### 5. Spiel-Modus: selbst fahren gegen das Modell
+
+```bash
+python -m kart_rl.game --policy runs/phase1_v2/best.zip --name Jeremy --open
+```
+oder im Dashboard bei einem Lauf «Selbst fahren» klicken. Du steuerst dasselbe Kart in derselben
+Simulation mit der Tastatur (Pfeiltasten oder WASD: lenken, Gas, Bremse), das Modell fährt als
+halbtransparenter Geist mit – gleicher Start nach einem 3-s-Countdown, keine Kollision zwischen
+beiden. Gleiche Regeln wie im Training: Bandenkontakt kostet Tempo (Kart wird zurückgedrückt) und
+macht die Runde ungültig (`*`). Backspace setzt dich nach einem Crash zurück auf die Strecke,
+R startet neu, 1–4 wechseln die Kamera.
+
+- HUD und Panel zeigen Runde, aktuelle, letzte und beste Rundenzeit für dich und die KI sowie die
+  Differenz der besten Runden.
+- Jede Runde wird in `runs/human/laps.csv` geloggt (Fahrer, Zeit, gültig, Gegner-Modell, KI-Bestzeit);
+  das Dashboard zeigt daraus die Tabelle «Mensch gegen KI».
+- Jeder Lauf (Neustart/Beenden) wird als Replay gespeichert: `replays/human/<Name>_<Zeit>_du.json`
+  und `…_KI.json` – im Replay-Modus zusammen laden, dann fährt dein Lauf gegen den der KI.
+- Zusätzlich entsteht `…_demo.json` (Beobachtungen + deine Aktionen) für den optionalen Zusatz
+  unten.
+
+**Zusatz (optional): Lernen vom Menschen.** `train/learn_from_human.py` nimmt deine gültigen Runden,
+die schneller waren als die KI im selben Lauf, und passt das Policy-Netz eines bestehenden Modells per
+Behaviour Cloning (überwachtes Lernen: Beobachtung → deine Aktion) an. Das Ergebnis ist ein normaler
+Checkpoint, der danach mit PPO weitertrainiert wird – RL verfeinert, was es kopiert hat:
+
+```bash
+python train/learn_from_human.py --model runs/phase1_v2/best.zip --out runs/phase1_v2_human
+python train/train_sb3.py --config train/configs/phase1_ppo.yaml --run-name phase1_v2_human \
+    --resume runs/phase1_v2_human/checkpoints/last.zip --more 3000000 --stream
+```
+(`--all-laps` nimmt alle gültigen Runden, `--faster-than 52` eine feste Schwelle.) Der normale
+Trainingsablauf benutzt davon nichts – es ist ein reiner Zusatz.
+
 ## Bedienung
 
 - Kameras: Verfolger, Onboard, Draufsicht, Frei (Maus) – Tasten 1–4

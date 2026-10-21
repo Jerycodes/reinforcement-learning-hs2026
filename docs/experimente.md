@@ -40,13 +40,27 @@ Lernkurven (Rundenzeit vs. Schritte) und druckt eine Tabelle.
 | `phase1_ppo.yaml` | Baseline: PPO, Fortschritts-Reward, Zufallsstart | Referenz |
 | `exp_sector_curriculum.yaml` | **Episode = ein Sektor**: erst 80 m lange Abschnitte, dann 200 m, 400 m, dann ganze Runden | lernt am Anfang schneller, weil jede Episode kurz und dicht an Reward ist; findet er danach die ganze Runde? |
 | `exp_reward_speed.yaml` | zusätzlicher Geschwindigkeits-Bonus | schneller, aber riskanter? mehr Abflüge? |
-| `exp_off_track_penalty.yaml` | Off-Track beendet die Episode nicht, kostet nur Reward | längere Episoden, mehr Exploration – oder lernt er "Abkürzungen"? |
+| `exp_off_track_penalty.yaml` | Bande als Hindernis: Kontakt beendet die Episode nicht, Kart wird zurückgedrückt, verliert Tempo und zahlt pro Kontakt-Schritt | längere Episoden, mehr Exploration – oder lehnt er sich an die Bande? |
+| Drift-Strafe (`env.reward_drift`, z. B. −0.02, Schwelle 6°) | Driften kostet Reward | sauberere Linie, weniger Reifenverschleiss (Phase 2) – aber langsamer, weil Driften am Kurvenausgang Zeit bringt? |
+| `exp_gamma997.yaml` | Gamma 0.997 / GAE 0.97: Horizont ~17 s statt 5 s | bremst früher, trifft den Scheitel, höhere Ausgangsgeschwindigkeit? (Beobachtung: spätes Bremsen, Scheitel verpasst) |
+| `exp_lidar60.yaml` | Lidar-Reichweite 60 m, 21 Strahlen | sieht die Kurve früher (30 m = 1.7 s bei 65 km/h, Bremsweg ~36 m) |
 | `exp_lidar31.yaml` | 31 statt 15 Lidar-Strahlen, 240° | bessere Linienwahl in engen Kurven? |
 | `exp_domain_random.yaml` | Grip und Masse pro Episode zufällig | robustere Policy (wichtig für Phase 2 mit Reifenverschleiss) |
 | `exp_sac.yaml` | SAC statt PPO | sample-effizienter? Rundenzeit nach 1 Mio Schritten |
 | `train/ppo_scratch.py` | eigener PPO, gleiche Config | reproduziert er SB3? (Lernkurve vergleichen) |
 
 | `train/pbt.py` | **Population Based Training**: 4+ Agenten parallel, schlechte übernehmen Gewichte und Hyperparameter der guten (mit Variation) | findet Lernrate/Entropie/Clip automatisch; schneller zur besten Runde? ([Jaderberg et al. 2017](https://arxiv.org/abs/1711.09846)) |
+
+**Bandenregel (seit Oktober):** Kein Teil des Karts darf die Bande berühren – die ganze Kontur wird
+geprüft, jeder Kontakt kostet −20 und beendet die Episode (vorher zählte nur der Mittelpunkt mit
+0.4 m Abstand, das Modell hing bis zu 0.8 m in der Bande). Die Referenzen wurden neu berechnet:
+Ideallinien-Fahrer 54.6 s, Modell-Optimum ≈ 49.6 s. Bestehende Modelle müssen unter der neuen Regel
+weitertrainiert werden (`phase1_wall`: ab `runs/phase1_long/checkpoints/last.zip`).
+
+**Mensch gegen KI:** Im Spiel-Modus (`python -m kart_rl.game`, Dashboard «Selbst fahren») fährt man
+selbst gegen das Modell – gleiche Simulation, gleiche Regeln; Rundenzeiten in `runs/human/laps.csv`.
+Zusatz: `train/learn_from_human.py` (Behaviour Cloning aus Runden, die schneller als die KI waren,
+danach PPO weiter) – Frage: hilft eine menschliche Vorlage dem Agenten, oder ist RL allein schon besser?
 
 Weitere Ideen: Hyperparameter (Lernrate, `n_steps`, Netzgrösse), Seeds vergleichen (gleiche Config,
 `--seed 1 2 3` – die Streuung ist bei RL gross), Aktion als Lenkwinkel-*Änderung* statt Absolutwert,
@@ -62,6 +76,6 @@ python scripts/compare_runs.py runs/phase1_ppo runs/exp_sector_curriculum runs/e
 
 | Lauf | Maschine | Schritte | beste Rundenzeit | Bemerkung |
 |---|---|---|---|---|
-| phase1_ppo | Cloud, 2 Kerne, 4 Envs | 1.4 Mio | 57.2 s | erste Runde nach 400k Schritten; Referenz Ideallinie 54.1 s |
+| phase1_ppo | Cloud, 2 Kerne, 4 Envs | 1.4 Mio | 57.2 s | erste Runde nach 400k Schritten; Referenz Ideallinie 54.1 s (alte Bandenregel) |
 | phase1_live | Mac (M-Series), 8 Envs | 3 Mio | 55.75 s | 7 Minuten; Kurve noch nicht am Ende |
-| phase1_long | Mac (M-Series), 10 Envs | 30 Mio | **51.05 s** | 64 Minuten, 7800 Schritte/s; stehende Runde 53.4 s; Plateau ab ≈ 13 Mio (51.2–51.8 s); schlägt den Ideallinien-Fahrer (54.1 s), Modell-Optimum ≈ 49.8 s |
+| phase1_long | Mac (M-Series), 10 Envs | 30 + 10 Mio | **50.95 s** | 64 + 20 Minuten, 7800 Schritte/s; stehende Runde 53.4 s; Plateau ab ≈ 13 Mio (51.2–51.8 s); schlägt den Ideallinien-Fahrer (54.1 s), Modell-Optimum ≈ 49.8 s – alles noch mit der alten Bandenregel (nur Kart-Mittelpunkt, 0.4 m) |

@@ -1,0 +1,40 @@
+# Experiment: longer lidar range (60 m, 21 rays). 30 m = 1.7 s of sight at 65 km/h, the braking
+# distance from top speed is ~36 m - does seeing the corner earlier give earlier braking?
+run_name: exp_lidar60            # runs/<run_name>/ (logs, checkpoints, best model)
+seed: 0
+total_timesteps: 10_000_000
+n_envs: 8                       # parallel environments (processes for SB3)
+
+env:                            # LapEnvConfig overrides (see kart_rl/envs/lap_env.py)
+  n_lidar: 21
+  lidar_range: 60.0
+  laps: 2
+  max_time: 150.0
+  random_start: true
+  start_speed_max: 8.0
+  off_track_margin: 0.1        # Mindestabstand der Kart-Kontur zur Bande; Kontakt = Abflug
+  off_track_mode: terminate
+  reward_progress: 1.0
+  reward_off_track: -20.0
+  reward_steer_change: 0.05
+
+ppo:                            # shared hyper-parameters
+  learning_rate: 3.0e-4
+  lr_schedule: linear           # linear | constant
+  n_steps: 1024                 # rollout length per environment
+  batch_size: 512
+  n_epochs: 10
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  ent_coef: 0.001
+  vf_coef: 0.5
+  max_grad_norm: 0.5
+  hidden_sizes: [256, 256]
+  activation: tanh
+  log_std_init: -0.5
+
+normalize_reward: true          # SB3: VecNormalize on rewards (observations are pre-normalised)
+checkpoint_every: 200_000       # env steps
+eval_every: 100_000             # env steps; standing-start evaluation, best model by lap time
+eval_laps: 2

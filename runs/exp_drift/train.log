@@ -1,0 +1,238 @@
+
+==== 2026-10-21 23:11:30  /Users/jeremynathan/PycharmProjects/reinforcement-learning-hs2026/.venv/bin/python train/train_sb3.py --config train/configs/exp_drift.yaml --run-name exp_drift --stream --stream-port 8766 --http-port 0 --no-open
+ActorCriticPolicy(
+  (features_extractor): FlattenExtractor(
+    (flatten): Flatten(start_dim=1, end_dim=-1)
+  )
+  (pi_features_extractor): FlattenExtractor(
+    (flatten): Flatten(start_dim=1, end_dim=-1)
+  )
+  (vf_features_extractor): FlattenExtractor(
+    (flatten): Flatten(start_dim=1, end_dim=-1)
+  )
+  (mlp_extractor): MlpExtractor(
+    (policy_net): Sequential(
+      (0): Linear(in_features=30, out_features=256, bias=True)
+      (1): Tanh()
+      (2): Linear(in_features=256, out_features=256, bias=True)
+      (3): Tanh()
+    )
+    (value_net): Sequential(
+      (0): Linear(in_features=30, out_features=256, bias=True)
+      (1): Tanh()
+      (2): Linear(in_features=256, out_features=256, bias=True)
+      (3): Tanh()
+    )
+  )
+  (action_net): Linear(in_features=256, out_features=2, bias=True)
+  (value_net): Linear(in_features=256, out_features=1, bias=True)
+)
+live stream on ws://localhost:8766
+3D viewer: (viewer served by the dashboard) ws port 8766
+reference lap times: {'Mittellinien-Fahrer': 71.6, 'Ideallinien-Fahrer': 54.6, 'Modell-Optimum (Schätzung)': 49.5}
+[eval @ 100,000 steps] off_track: laps []  distance 201 m
+[eval @ 200,000 steps] off_track: laps []  distance 311 m
+[eval @ 300,000 steps] off_track: laps []  distance 519 m
+[eval @ 400,000 steps] off_track: laps [64.9]  distance 676 m
+    new best lap 64.90 s -> saved runs/exp_drift/best.zip
+[eval @ 500,000 steps] laps: laps [64.4, 62.8]  distance 1280 m
+    new best lap 62.80 s -> saved runs/exp_drift/best.zip
+[eval @ 600,000 steps] laps: laps [63.9, 62.15]  distance 1280 m
+    new best lap 62.15 s -> saved runs/exp_drift/best.zip
+[eval @ 700,000 steps] laps: laps [63.2, 61.4]  distance 1279 m
+    new best lap 61.40 s -> saved runs/exp_drift/best.zip
+[eval @ 800,000 steps] off_track: laps []  distance 205 m
+[eval @ 900,000 steps] laps: laps [61.15, 59.4]  distance 1279 m
+    new best lap 59.40 s -> saved runs/exp_drift/best.zip
+[eval @ 1,000,000 steps] laps: laps [59.6, 57.75]  distance 1279 m
+    new best lap 57.75 s -> saved runs/exp_drift/best.zip
+[eval @ 1,100,000 steps] laps: laps [59.45, 57.7]  distance 1280 m
+    new best lap 57.70 s -> saved runs/exp_drift/best.zip
+[eval @ 1,200,000 steps] laps: laps [59.3, 57.5]  distance 1280 m
+    new best lap 57.50 s -> saved runs/exp_drift/best.zip
+[eval @ 1,300,000 steps] laps: laps [59.4, 57.6]  distance 1279 m
+[eval @ 1,400,000 steps] laps: laps [58.75, 56.95]  distance 1280 m
+    new best lap 56.95 s -> saved runs/exp_drift/best.zip
+[eval @ 1,500,000 steps] laps: laps [58.75, 56.95]  distance 1280 m
+[eval @ 1,600,000 steps] off_track: laps []  distance 209 m
+[eval @ 1,700,000 steps] laps: laps [58.6, 56.9]  distance 1280 m
+    new best lap 56.90 s -> saved runs/exp_drift/best.zip
+[eval @ 1,800,000 steps] laps: laps [58.55, 56.75]  distance 1280 m
+    new best lap 56.75 s -> saved runs/exp_drift/best.zip
+[eval @ 1,900,000 steps] laps: laps [57.85, 56.15]  distance 1279 m
+    new best lap 56.15 s -> saved runs/exp_drift/best.zip
+[eval @ 2,000,000 steps] laps: laps [57.9, 56.1]  distance 1280 m
+    new best lap 56.10 s -> saved runs/exp_drift/best.zip
+[eval @ 2,100,000 steps] laps: laps [57.55, 55.8]  distance 1279 m
+    new best lap 55.80 s -> saved runs/exp_drift/best.zip
+[eval @ 2,200,000 steps] laps: laps [57.15, 55.4]  distance 1280 m
+    new best lap 55.40 s -> saved runs/exp_drift/best.zip
+[eval @ 2,300,000 steps] laps: laps [57.2, 55.45]  distance 1280 m
+[eval @ 2,400,000 steps] laps: laps [56.65, 54.9]  distance 1280 m
+    new best lap 54.90 s -> saved runs/exp_drift/best.zip
+[eval @ 2,500,000 steps] laps: laps [56.7, 54.75]  distance 1279 m
+    new best lap 54.75 s -> saved runs/exp_drift/best.zip
+[eval @ 2,600,000 steps] laps: laps [56.4, 54.55]  distance 1280 m
+    new best lap 54.55 s -> saved runs/exp_drift/best.zip
+[eval @ 2,700,000 steps] laps: laps [56.25, 54.5]  distance 1279 m
+    new best lap 54.50 s -> saved runs/exp_drift/best.zip
+[eval @ 2,800,000 steps] off_track: laps []  distance 153 m
+[eval @ 2,900,000 steps] laps: laps [56.3, 54.15]  distance 1279 m
+    new best lap 54.15 s -> saved runs/exp_drift/best.zip
+[eval @ 3,000,000 steps] laps: laps [56.55, 54.35]  distance 1280 m
+[eval @ 3,100,000 steps] laps: laps [56.2, 54.2]  distance 1280 m
+[eval @ 3,200,000 steps] laps: laps [56.15, 54.4]  distance 1280 m
+[eval @ 3,300,000 steps] laps: laps [56.45, 54.75]  distance 1280 m
+[eval @ 3,400,000 steps] off_track: laps []  distance 26 m
+[eval @ 3,500,000 steps] off_track: laps []  distance 26 m
+[eval @ 3,600,000 steps] laps: laps [55.9, 53.95]  distance 1279 m
+    new best lap 53.95 s -> saved runs/exp_drift/best.zip
+[eval @ 3,700,000 steps] off_track: laps []  distance 27 m
+[eval @ 3,800,000 steps] laps: laps [55.95, 53.85]  distance 1280 m
+    new best lap 53.85 s -> saved runs/exp_drift/best.zip
+[eval @ 3,900,000 steps] off_track: laps []  distance 27 m
+[eval @ 4,000,000 steps] laps: laps [55.85, 53.85]  distance 1279 m
+[eval @ 4,100,000 steps] laps: laps [55.9, 53.8]  distance 1280 m
+    new best lap 53.80 s -> saved runs/exp_drift/best.zip
+[eval @ 4,200,000 steps] laps: laps [55.75, 54.05]  distance 1280 m
+[eval @ 4,300,000 steps] off_track: laps []  distance 26 m
+[eval @ 4,400,000 steps] off_track: laps []  distance 26 m
+[eval @ 4,500,000 steps] off_track: laps []  distance 26 m
+[eval @ 4,600,000 steps] off_track: laps []  distance 26 m
+[eval @ 4,700,000 steps] off_track: laps []  distance 25 m
+[eval @ 4,800,000 steps] off_track: laps []  distance 26 m
+[eval @ 4,900,000 steps] laps: laps [55.55, 53.7]  distance 1280 m
+    new best lap 53.70 s -> saved runs/exp_drift/best.zip
+[eval @ 5,000,000 steps] laps: laps [55.45, 53.45]  distance 1279 m
+    new best lap 53.45 s -> saved runs/exp_drift/best.zip
+[eval @ 5,100,000 steps] laps: laps [55.45, 53.55]  distance 1280 m
+[eval @ 5,200,000 steps] laps: laps [55.5, 53.55]  distance 1280 m
+[eval @ 5,300,000 steps] laps: laps [55.65, 53.7]  distance 1280 m
+[eval @ 5,400,000 steps] off_track: laps [55.25]  distance 1117 m
+[eval @ 5,500,000 steps] laps: laps [55.15, 53.25]  distance 1280 m
+    new best lap 53.25 s -> saved runs/exp_drift/best.zip
+[eval @ 5,600,000 steps] off_track: laps []  distance 27 m
+[eval @ 5,700,000 steps] laps: laps [55.4, 53.65]  distance 1280 m
+[eval @ 5,800,000 steps] off_track: laps []  distance 155 m
+[eval @ 5,900,000 steps] laps: laps [55.2, 53.35]  distance 1279 m
+[eval @ 6,000,000 steps] laps: laps [55.25, 53.4]  distance 1280 m
+[eval @ 6,100,000 steps] laps: laps [55.45, 53.4]  distance 1279 m
+[eval @ 6,200,000 steps] laps: laps [55.2, 53.1]  distance 1280 m
+    new best lap 53.10 s -> saved runs/exp_drift/best.zip
+[eval @ 6,300,000 steps] laps: laps [55.6, 53.55]  distance 1279 m
+[eval @ 6,400,000 steps] laps: laps [55.2, 53.2]  distance 1280 m
+[eval @ 6,500,000 steps] laps: laps [55.45, 53.4]  distance 1280 m
+[eval @ 6,600,000 steps] laps: laps [55.15, 53.2]  distance 1280 m
+[eval @ 6,700,000 steps] laps: laps [55.1, 53.1]  distance 1280 m
+[eval @ 6,800,000 steps] laps: laps [55.45, 53.6]  distance 1279 m
+[eval @ 6,900,000 steps] laps: laps [55.1, 53.15]  distance 1279 m
+[eval @ 7,000,000 steps] laps: laps [55.05, 53.15]  distance 1279 m
+[eval @ 7,100,000 steps] laps: laps [55.25, 53.3]  distance 1280 m
+[eval @ 7,200,000 steps] laps: laps [55.15, 53.2]  distance 1279 m
+[eval @ 7,300,000 steps] laps: laps [55.1, 53.05]  distance 1279 m
+    new best lap 53.05 s -> saved runs/exp_drift/best.zip
+[eval @ 7,400,000 steps] laps: laps [55.35, 53.35]  distance 1280 m
+[eval @ 7,500,000 steps] laps: laps [55.7, 53.7]  distance 1279 m
+[eval @ 7,600,000 steps] laps: laps [55.2, 53.25]  distance 1279 m
+[eval @ 7,700,000 steps] laps: laps [55.2, 53.15]  distance 1280 m
+[eval @ 7,800,000 steps] laps: laps [55.1, 53.05]  distance 1279 m
+[eval @ 7,900,000 steps] laps: laps [55.1, 53.15]  distance 1280 m
+[eval @ 8,000,000 steps] laps: laps [55.3, 53.25]  distance 1280 m
+[eval @ 8,100,000 steps] laps: laps [55.2, 53.3]  distance 1280 m
+[eval @ 8,200,000 steps] laps: laps [55.35, 53.25]  distance 1279 m
+[eval @ 8,300,000 steps] laps: laps [54.85, 52.9]  distance 1279 m
+    new best lap 52.90 s -> saved runs/exp_drift/best.zip
+[eval @ 8,400,000 steps] laps: laps [55.25, 53.25]  distance 1280 m
+[eval @ 8,500,000 steps] laps: laps [55.45, 53.45]  distance 1280 m
+[eval @ 8,600,000 steps] laps: laps [55.15, 53.35]  distance 1280 m
+[eval @ 8,700,000 steps] laps: laps [55.2, 53.35]  distance 1280 m
+[eval @ 8,800,000 steps] laps: laps [55.05, 53.2]  distance 1279 m
+[eval @ 8,900,000 steps] laps: laps [55.0, 53.1]  distance 1280 m
+[eval @ 9,000,000 steps] laps: laps [55.05, 53.1]  distance 1280 m
+[eval @ 9,100,000 steps] laps: laps [55.1, 53.15]  distance 1280 m
+[eval @ 9,200,000 steps] laps: laps [55.5, 53.55]  distance 1279 m
+[eval @ 9,300,000 steps] laps: laps [55.05, 53.05]  distance 1280 m
+[eval @ 9,400,000 steps] laps: laps [55.25, 53.2]  distance 1279 m
+[eval @ 9,500,000 steps] laps: laps [55.2, 53.25]  distance 1280 m
+[eval @ 9,600,000 steps] laps: laps [55.25, 53.25]  distance 1280 m
+[eval @ 9,700,000 steps] laps: laps [55.15, 53.2]  distance 1280 m
+[eval @ 9,800,000 steps] laps: laps [55.0, 53.1]  distance 1280 m
+[eval @ 9,900,000 steps] laps: laps [55.25, 53.2]  distance 1280 m
+[eval @ 10,000,000 steps] laps: laps [55.1, 53.1]  distance 1280 m
+[eval @ 10,100,000 steps] laps: laps [55.2, 53.15]  distance 1279 m
+[eval @ 10,200,000 steps] laps: laps [55.2, 53.3]  distance 1280 m
+[eval @ 10,300,000 steps] laps: laps [55.2, 53.2]  distance 1280 m
+[eval @ 10,400,000 steps] laps: laps [55.3, 53.4]  distance 1280 m
+[eval @ 10,500,000 steps] laps: laps [55.4, 53.2]  distance 1279 m
+[eval @ 10,600,000 steps] laps: laps [55.05, 53.05]  distance 1280 m
+[eval @ 10,700,000 steps] laps: laps [55.3, 53.15]  distance 1280 m
+[eval @ 10,800,000 steps] laps: laps [55.3, 53.25]  distance 1279 m
+[eval @ 10,900,000 steps] laps: laps [55.35, 53.25]  distance 1280 m
+[eval @ 11,000,000 steps] laps: laps [55.25, 53.25]  distance 1279 m
+[eval @ 11,100,000 steps] laps: laps [55.15, 53.25]  distance 1279 m
+[eval @ 11,200,000 steps] laps: laps [55.25, 53.2]  distance 1280 m
+[eval @ 11,300,000 steps] laps: laps [55.15, 53.2]  distance 1280 m
+[eval @ 11,400,000 steps] laps: laps [55.0, 53.0]  distance 1279 m
+[eval @ 11,500,000 steps] laps: laps [55.15, 53.2]  distance 1280 m
+[eval @ 11,600,000 steps] laps: laps [54.8, 52.7]  distance 1279 m
+    new best lap 52.70 s -> saved runs/exp_drift/best.zip
+[eval @ 11,700,000 steps] laps: laps [55.05, 52.95]  distance 1279 m
+[eval @ 11,800,000 steps] laps: laps [54.75, 52.85]  distance 1280 m
+[eval @ 11,900,000 steps] laps: laps [55.0, 53.05]  distance 1279 m
+[eval @ 12,000,000 steps] laps: laps [55.05, 52.95]  distance 1280 m
+[eval @ 12,100,000 steps] laps: laps [54.9, 52.95]  distance 1280 m
+[eval @ 12,200,000 steps] laps: laps [54.75, 52.75]  distance 1280 m
+[eval @ 12,300,000 steps] laps: laps [54.85, 52.85]  distance 1280 m
+[eval @ 12,400,000 steps] laps: laps [54.9, 52.85]  distance 1279 m
+[eval @ 12,500,000 steps] laps: laps [54.95, 53.1]  distance 1280 m
+[eval @ 12,600,000 steps] laps: laps [54.75, 53.0]  distance 1280 m
+[eval @ 12,700,000 steps] laps: laps [54.85, 53.15]  distance 1280 m
+[eval @ 12,800,000 steps] laps: laps [55.0, 53.1]  distance 1279 m
+[eval @ 12,900,000 steps] laps: laps [54.8, 52.85]  distance 1279 m
+[eval @ 13,000,000 steps] laps: laps [55.0, 53.0]  distance 1279 m
+[eval @ 13,100,000 steps] laps: laps [54.95, 53.1]  distance 1279 m
+[eval @ 13,200,000 steps] laps: laps [54.95, 53.0]  distance 1280 m
+[eval @ 13,300,000 steps] laps: laps [55.2, 53.2]  distance 1280 m
+[eval @ 13,400,000 steps] laps: laps [54.95, 53.0]  distance 1280 m
+[eval @ 13,500,000 steps] laps: laps [54.9, 53.0]  distance 1279 m
+[eval @ 13,600,000 steps] laps: laps [55.0, 52.9]  distance 1280 m
+[eval @ 13,700,000 steps] laps: laps [54.75, 52.8]  distance 1280 m
+[eval @ 13,800,000 steps] laps: laps [55.0, 53.0]  distance 1280 m
+[eval @ 13,900,000 steps] laps: laps [55.15, 53.05]  distance 1280 m
+[eval @ 14,000,000 steps] laps: laps [55.05, 52.9]  distance 1280 m
+[eval @ 14,100,000 steps] laps: laps [54.95, 53.05]  distance 1280 m
+[eval @ 14,200,000 steps] laps: laps [55.45, 53.5]  distance 1279 m
+[eval @ 14,300,000 steps] laps: laps [55.15, 53.2]  distance 1279 m
+[eval @ 14,400,000 steps] laps: laps [55.15, 53.15]  distance 1280 m
+[eval @ 14,500,000 steps] off_track: laps []  distance 114 m
+[eval @ 14,600,000 steps] laps: laps [55.3, 53.25]  distance 1279 m
+[eval @ 14,700,000 steps] laps: laps [55.15, 53.15]  distance 1280 m
+
+interrupted - saving last model
+done: 14,735,060 steps in 32.4 min (7577 steps/s)
+models: runs/exp_drift/checkpoints/last.zip  best: runs/exp_drift/best.zip
+Traceback (most recent call last):
+  File "/Users/jeremynathan/PycharmProjects/reinforcement-learning-hs2026/train/train_sb3.py", line 392, in <module>
+    main()
+    ~~~~^^
+  File "/Users/jeremynathan/PycharmProjects/reinforcement-learning-hs2026/train/train_sb3.py", line 376, in main
+    vec.close()
+    ~~~~~~~~~^^
+  File "/Users/jeremynathan/PycharmProjects/reinforcement-learning-hs2026/.venv/lib/python3.14/site-packages/stable_baselines3/common/vec_env/base_vec_env.py", line 402, in close
+    return self.venv.close()
+           ~~~~~~~~~~~~~~~^^
+  File "/Users/jeremynathan/PycharmProjects/reinforcement-learning-hs2026/.venv/lib/python3.14/site-packages/stable_baselines3/common/vec_env/vec_monitor.py", line 99, in close
+    return self.venv.close()
+           ~~~~~~~~~~~~~~~^^
+  File "/Users/jeremynathan/PycharmProjects/reinforcement-learning-hs2026/.venv/lib/python3.14/site-packages/stable_baselines3/common/vec_env/subproc_vec_env.py", line 159, in close
+    remote.send(("close", None))
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.4_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/multiprocessing/connection.py", line 213, in send
+    self._send_bytes(_ForkingPickler.dumps(obj))
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.4_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/multiprocessing/connection.py", line 445, in _send_bytes
+    self._send(header + buf)
+    ~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.4_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/multiprocessing/connection.py", line 401, in _send
+    n = write(self._handle, buf)
+BrokenPipeError: [Errno 32] Broken pipe

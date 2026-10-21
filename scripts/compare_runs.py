@@ -49,13 +49,19 @@ def main():
         ax2.plot(steps / 1e6, np.where(np.isfinite(best_running), best_running, np.nan), lw=1.5, label=name)
         first = steps[ok][0] if ok.any() else None
         rows.append((name, int(steps[-1]), float(np.nanmin(lap)) if ok.any() else None, first, float(wall[-1]) / 60))
+    from kart_rl.evaluation import load_reference_lap_times
+
+    refs = load_reference_lap_times()
     for ax, title in ((ax1, "Rundenzeit der Evaluation (stehender Start)"), (ax2, "beste Rundenzeit bisher")):
         ax.set_xlabel("Trainingsschritte [Mio]")
         ax.set_ylabel("Rundenzeit [s]")
         ax.set_title(title)
         ax.grid(alpha=0.3)
-        ax.axhline(54.1, color="k", ls="--", lw=0.8)
-        ax.text(0.01, 54.3, "Ideallinien-Fahrer 54.1 s", fontsize=8)
+        for label, t in refs.items():
+            if "Mittellinie" in label:
+                continue
+            ax.axhline(t, color="k", ls="--", lw=0.8)
+            ax.text(0.01, t + 0.2, f"{label} {t:.1f} s", fontsize=8)
         ax.legend(fontsize=8)
     fig.tight_layout()
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)

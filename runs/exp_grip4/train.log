@@ -1,0 +1,57 @@
+
+==== 2026-10-22 00:03:01  /Users/jeremynathan/PycharmProjects/reinforcement-learning-hs2026/.venv/bin/python train/train_sb3.py --config train/configs/exp_grip4.yaml --run-name exp_grip4 --stream --stream-port 8767 --http-port 0 --no-open
+ActorCriticPolicy(
+  (features_extractor): FlattenExtractor(
+    (flatten): Flatten(start_dim=1, end_dim=-1)
+  )
+  (pi_features_extractor): FlattenExtractor(
+    (flatten): Flatten(start_dim=1, end_dim=-1)
+  )
+  (vf_features_extractor): FlattenExtractor(
+    (flatten): Flatten(start_dim=1, end_dim=-1)
+  )
+  (mlp_extractor): MlpExtractor(
+    (policy_net): Sequential(
+      (0): Linear(in_features=30, out_features=256, bias=True)
+      (1): Tanh()
+      (2): Linear(in_features=256, out_features=256, bias=True)
+      (3): Tanh()
+    )
+    (value_net): Sequential(
+      (0): Linear(in_features=30, out_features=256, bias=True)
+      (1): Tanh()
+      (2): Linear(in_features=256, out_features=256, bias=True)
+      (3): Tanh()
+    )
+  )
+  (action_net): Linear(in_features=256, out_features=2, bias=True)
+  (value_net): Linear(in_features=256, out_features=1, bias=True)
+)
+live stream on ws://localhost:8767
+3D viewer: (viewer served by the dashboard) ws port 8767
+reference lap times: {'Mittellinien-Fahrer': 71.6, 'Ideallinien-Fahrer': 54.6, 'Modell-Optimum (Schätzung)': 49.5}
+[eval @ 100,000 steps] off_track: laps []  distance 310 m
+[eval @ 200,000 steps] laps: laps [51.65, 49.25]  distance 1280 m
+    new best lap 49.25 s -> saved runs/exp_grip4/best.zip
+[eval @ 300,000 steps] laps: laps [49.0, 46.8]  distance 1280 m
+    new best lap 46.80 s -> saved runs/exp_grip4/best.zip
+[eval @ 400,000 steps] laps: laps [47.5, 45.2]  distance 1280 m
+    new best lap 45.20 s -> saved runs/exp_grip4/best.zip
+[eval @ 500,000 steps] laps: laps [47.4, 45.15]  distance 1280 m
+    new best lap 45.15 s -> saved runs/exp_grip4/best.zip
+[eval @ 600,000 steps] laps: laps [46.75, 44.35]  distance 1280 m
+    new best lap 44.35 s -> saved runs/exp_grip4/best.zip
+[eval @ 700,000 steps] laps: laps [46.4, 44.05]  distance 1279 m
+    new best lap 44.05 s -> saved runs/exp_grip4/best.zip
+[eval @ 800,000 steps] laps: laps [45.9, 43.5]  distance 1280 m
+    new best lap 43.50 s -> saved runs/exp_grip4/best.zip
+[eval @ 900,000 steps] laps: laps [46.05, 43.75]  distance 1280 m
+[eval @ 1,000,000 steps] laps: laps [45.6, 43.05]  distance 1280 m
+    new best lap 43.05 s -> saved runs/exp_grip4/best.zip
+[eval @ 1,100,000 steps] laps: laps [45.65, 43.15]  distance 1280 m
+[eval @ 1,200,000 steps] laps: laps [45.35, 42.95]  distance 1280 m
+    new best lap 42.95 s -> saved runs/exp_grip4/best.zip
+[eval @ 1,300,000 steps] laps: laps [45.45, 43.1]  distance 1280 m
+[eval @ 1,400,000 steps] laps: laps [45.4, 42.95]  distance 1280 m
+[eval @ 1,500,000 steps] laps: laps [45.1, 42.6]  distance 1280 m
+    new best lap 42.60 s -> saved runs/exp_grip4/best.zip

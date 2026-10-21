@@ -50,7 +50,7 @@ KART_SCHEMA = {
     "kart.mass": ("Masse [kg]", 120, 260, 5),
 }
 ENV_SCHEMA = {
-    "env.off_track_margin": ("Off-Track-Abstand [m] (ab Reset)", 0.0, 1.5, 0.05),
+    "env.off_track_margin": ("Abstand Kart–Bande [m] (ab Reset)", 0.0, 1.0, 0.05),
 }
 
 

@@ -27,7 +27,7 @@ tools = ["opencv-python-headless>=4.8", "scikit-image>=0.21"]
 include = ["kart_rl*"]
 
 [tool.setuptools.package-data]
-kart_rl = ["data/*.json", "data/*.png"]
+kart_rl = ["data/*.json", "data/*.png", "dashboard/*.html"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

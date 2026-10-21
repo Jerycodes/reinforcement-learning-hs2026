@@ -44,7 +44,7 @@ Pro Zeitschritt (50 ms) bekommt der Agent:
 |---|---|---|
 | Fortschritt | + 1.0 pro Meter entlang der Strecke (`reward_progress`) | das eigentliche Ziel: vorwärts kommen; eine Runde = 640 Punkte |
 | Zickzack | − 0.05 · (Änderung des Lenkbefehls)² (`reward_steer_change`) | ruhige Lenkung, realistischeres Fahren |
-| Abflug | − 20 und Episode zu Ende (`reward_off_track`) | Streckenrand ist die Grenze (0.4 m Abstand für die Kartbreite) |
+| Bandenkontakt | − 20 und Episode zu Ende (`reward_off_track`) | kein Teil des Karts darf die Bande berühren (ganze Kontur wird geprüft) |
 | Stillstand > 5 s, > 10 m rückwärts | − 20 und Episode zu Ende | sonst könnte "stehen bleiben" eine sichere Strategie sein |
 | Nähe zur Mittellinie | **nichts** | die Linie soll er selbst finden – die Mittellinie ist nur der Meterzähler |
 
@@ -66,7 +66,7 @@ weniger Weg – darum lernt er die Ideallinie, ohne dass wir sie ihm zeigen.
 | Richtungsfehler | 1 | Winkel zwischen Kart und Streckenrichtung | / 90° |
 | seitliche Position | 1 | links/rechts der Mittellinie | / halbe Breite |
 | Krümmung voraus | 6 | in 5, 10, 20, 35, 50, 70 m (+ = Linkskurve) | × 4 |
-| Randabstand | 1 | Abstand zum nächsten Rand | / 4 m |
+| Randabstand | 1 | Abstand der Kart-Kontur zur nächsten Bande | / 4 m |
 | Lenkwinkel | 1 | tatsächliche Radstellung | / max |
 | letzte Aktion | 2 | Lenken, Gas des Vorschritts | – |
 
@@ -136,8 +136,8 @@ uns nach ≈ 300–400k Schritten) → Rundenzeit sinkt von 65 s auf ≈ 56 s. D
 von Checkpoint zu Checkpoint – das ist bei Policy-Gradient-Verfahren normal; deshalb wird das
 beste Modell separat gespeichert.
 
-Referenzen zum Einordnen: geskripteter Mittellinien-Fahrer 71.6 s, geskriptete Ideallinie 54.1 s,
-theoretisches Optimum des Kart-Modells ≈ 49.8 s (`docs/ideallinie.md`).
+Referenzen zum Einordnen: geskripteter Mittellinien-Fahrer 71.6 s, geskriptete Ideallinie 54.6 s,
+theoretisches Optimum des Kart-Modells ≈ 49.6 s (`docs/ideallinie.md`).
 
 ## 8. Hyperparameter (train/configs/phase1_ppo.yaml) – was sie bewirken
 

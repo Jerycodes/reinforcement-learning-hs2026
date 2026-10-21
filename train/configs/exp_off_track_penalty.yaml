@@ -7,7 +7,7 @@ env:
   max_time: 150.0
   random_start: true
   start_speed_max: 8.0
-  off_track_margin: 0.4
+  off_track_margin: 0.1        # Mindestabstand der Kart-Kontur zur Bande; Kontakt = Abflug
   off_track_mode: penalty
   reward_progress: 1.0
   reward_off_track: -2.0

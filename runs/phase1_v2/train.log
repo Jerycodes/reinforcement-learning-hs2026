@@ -1,0 +1,376 @@
+
+==== 2026-10-21 21:56:41  /Users/jeremynathan/PycharmProjects/reinforcement-learning-hs2026/.venv/bin/python train/train_sb3.py --config train/configs/phase1_v2.yaml --run-name phase1_v2 --stream --stream-port 8765 --http-port 0 --no-open
+ActorCriticPolicy(
+  (features_extractor): FlattenExtractor(
+    (flatten): Flatten(start_dim=1, end_dim=-1)
+  )
+  (pi_features_extractor): FlattenExtractor(
+    (flatten): Flatten(start_dim=1, end_dim=-1)
+  )
+  (vf_features_extractor): FlattenExtractor(
+    (flatten): Flatten(start_dim=1, end_dim=-1)
+  )
+  (mlp_extractor): MlpExtractor(
+    (policy_net): Sequential(
+      (0): Linear(in_features=30, out_features=256, bias=True)
+      (1): Tanh()
+      (2): Linear(in_features=256, out_features=256, bias=True)
+      (3): Tanh()
+    )
+    (value_net): Sequential(
+      (0): Linear(in_features=30, out_features=256, bias=True)
+      (1): Tanh()
+      (2): Linear(in_features=256, out_features=256, bias=True)
+      (3): Tanh()
+    )
+  )
+  (action_net): Linear(in_features=256, out_features=2, bias=True)
+  (value_net): Linear(in_features=256, out_features=1, bias=True)
+)
+live stream on ws://localhost:8765
+3D viewer: (viewer served by the dashboard) ws port 8765
+reference lap times: {'Mittellinien-Fahrer': 71.6, 'Ideallinien-Fahrer': 54.6, 'Modell-Optimum (Schätzung)': 49.5}
+[eval @ 100,000 steps] off_track: laps []  distance 310 m
+[eval @ 200,000 steps] off_track: laps []  distance 109 m
+[eval @ 300,000 steps] laps: laps [65.4, 63.9]  distance 1280 m
+    new best lap 63.90 s -> saved runs/phase1_v2/best.zip
+[eval @ 400,000 steps] laps: laps [64.15, 64.1]  distance 1279 m
+[eval @ 500,000 steps] laps: laps [63.85, 62.25]  distance 1280 m
+    new best lap 62.25 s -> saved runs/phase1_v2/best.zip
+[eval @ 600,000 steps] laps: laps [63.2, 61.4]  distance 1279 m
+    new best lap 61.40 s -> saved runs/phase1_v2/best.zip
+[eval @ 700,000 steps] laps: laps [63.35, 61.35]  distance 1280 m
+    new best lap 61.35 s -> saved runs/phase1_v2/best.zip
+[eval @ 800,000 steps] off_track: laps []  distance 496 m
+[eval @ 900,000 steps] off_track: laps []  distance 493 m
+[eval @ 1,000,000 steps] off_track: laps []  distance 492 m
+[eval @ 1,100,000 steps] laps: laps [62.05, 59.9]  distance 1279 m
+    new best lap 59.90 s -> saved runs/phase1_v2/best.zip
+[eval @ 1,200,000 steps] laps: laps [60.9, 59.15]  distance 1280 m
+    new best lap 59.15 s -> saved runs/phase1_v2/best.zip
+[eval @ 1,300,000 steps] laps: laps [60.45, 58.75]  distance 1280 m
+    new best lap 58.75 s -> saved runs/phase1_v2/best.zip
+[eval @ 1,400,000 steps] laps: laps [60.4, 58.75]  distance 1279 m
+[eval @ 1,500,000 steps] laps: laps [60.15, 58.5]  distance 1280 m
+    new best lap 58.50 s -> saved runs/phase1_v2/best.zip
+[eval @ 1,600,000 steps] laps: laps [60.3, 58.3]  distance 1280 m
+    new best lap 58.30 s -> saved runs/phase1_v2/best.zip
+[eval @ 1,700,000 steps] laps: laps [60.1, 58.0]  distance 1280 m
+    new best lap 58.00 s -> saved runs/phase1_v2/best.zip
+[eval @ 1,800,000 steps] off_track: laps [59.8]  distance 953 m
+[eval @ 1,900,000 steps] laps: laps [59.4, 57.35]  distance 1280 m
+    new best lap 57.35 s -> saved runs/phase1_v2/best.zip
+[eval @ 2,000,000 steps] laps: laps [59.1, 57.0]  distance 1279 m
+    new best lap 57.00 s -> saved runs/phase1_v2/best.zip
+[eval @ 2,100,000 steps] laps: laps [58.7, 56.75]  distance 1280 m
+    new best lap 56.75 s -> saved runs/phase1_v2/best.zip
+[eval @ 2,200,000 steps] off_track: laps []  distance 210 m
+[eval @ 2,300,000 steps] off_track: laps []  distance 478 m
+[eval @ 2,400,000 steps] off_track: laps []  distance 478 m
+[eval @ 2,500,000 steps] laps: laps [58.05, 56.15]  distance 1279 m
+    new best lap 56.15 s -> saved runs/phase1_v2/best.zip
+[eval @ 2,600,000 steps] laps: laps [58.1, 56.05]  distance 1280 m
+    new best lap 56.05 s -> saved runs/phase1_v2/best.zip
+[eval @ 2,700,000 steps] laps: laps [57.65, 55.75]  distance 1280 m
+    new best lap 55.75 s -> saved runs/phase1_v2/best.zip
+[eval @ 2,800,000 steps] off_track: laps []  distance 210 m
+[eval @ 2,900,000 steps] laps: laps [57.5, 55.55]  distance 1279 m
+    new best lap 55.55 s -> saved runs/phase1_v2/best.zip
+[eval @ 3,000,000 steps] laps: laps [57.75, 55.85]  distance 1279 m
+[eval @ 3,100,000 steps] laps: laps [57.6, 55.55]  distance 1279 m
+[eval @ 3,200,000 steps] laps: laps [57.5, 55.45]  distance 1280 m
+    new best lap 55.45 s -> saved runs/phase1_v2/best.zip
+[eval @ 3,300,000 steps] laps: laps [57.15, 55.25]  distance 1280 m
+    new best lap 55.25 s -> saved runs/phase1_v2/best.zip
+[eval @ 3,400,000 steps] laps: laps [57.15, 55.25]  distance 1280 m
+[eval @ 3,500,000 steps] laps: laps [57.0, 55.0]  distance 1279 m
+    new best lap 55.00 s -> saved runs/phase1_v2/best.zip
+[eval @ 3,600,000 steps] laps: laps [56.95, 55.1]  distance 1280 m
+[eval @ 3,700,000 steps] laps: laps [56.7, 54.6]  distance 1279 m
+    new best lap 54.60 s -> saved runs/phase1_v2/best.zip
+[eval @ 3,800,000 steps] laps: laps [56.95, 54.95]  distance 1280 m
+[eval @ 3,900,000 steps] laps: laps [56.75, 54.95]  distance 1280 m
+[eval @ 4,000,000 steps] laps: laps [56.8, 54.85]  distance 1279 m
+[eval @ 4,100,000 steps] laps: laps [56.3, 54.35]  distance 1279 m
+    new best lap 54.35 s -> saved runs/phase1_v2/best.zip
+[eval @ 4,200,000 steps] laps: laps [56.6, 54.7]  distance 1279 m
+[eval @ 4,300,000 steps] laps: laps [56.7, 54.95]  distance 1280 m
+[eval @ 4,400,000 steps] laps: laps [56.6, 54.7]  distance 1280 m
+[eval @ 4,500,000 steps] laps: laps [57.05, 55.05]  distance 1279 m
+[eval @ 4,600,000 steps] laps: laps [56.65, 54.8]  distance 1279 m
+[eval @ 4,700,000 steps] laps: laps [56.4, 54.45]  distance 1280 m
+[eval @ 4,800,000 steps] laps: laps [56.4, 54.55]  distance 1279 m
+[eval @ 4,900,000 steps] laps: laps [56.55, 54.45]  distance 1280 m
+[eval @ 5,000,000 steps] laps: laps [55.95, 54.15]  distance 1280 m
+    new best lap 54.15 s -> saved runs/phase1_v2/best.zip
+[eval @ 5,100,000 steps] laps: laps [56.0, 54.05]  distance 1280 m
+    new best lap 54.05 s -> saved runs/phase1_v2/best.zip
+[eval @ 5,200,000 steps] laps: laps [56.25, 54.35]  distance 1280 m
+[eval @ 5,300,000 steps] laps: laps [55.95, 53.95]  distance 1280 m
+    new best lap 53.95 s -> saved runs/phase1_v2/best.zip
+[eval @ 5,400,000 steps] laps: laps [56.05, 53.8]  distance 1280 m
+    new best lap 53.80 s -> saved runs/phase1_v2/best.zip
+[eval @ 5,500,000 steps] laps: laps [55.85, 53.95]  distance 1280 m
+[eval @ 5,600,000 steps] laps: laps [55.9, 53.85]  distance 1280 m
+[eval @ 5,700,000 steps] laps: laps [56.0, 54.0]  distance 1279 m
+[eval @ 5,800,000 steps] laps: laps [55.7, 53.65]  distance 1280 m
+    new best lap 53.65 s -> saved runs/phase1_v2/best.zip
+[eval @ 5,900,000 steps] laps: laps [56.25, 54.35]  distance 1280 m
+[eval @ 6,000,000 steps] laps: laps [56.35, 54.2]  distance 1280 m
+[eval @ 6,100,000 steps] laps: laps [56.35, 54.1]  distance 1280 m
+[eval @ 6,200,000 steps] laps: laps [56.45, 54.3]  distance 1280 m
+[eval @ 6,300,000 steps] laps: laps [56.0, 54.15]  distance 1280 m
+[eval @ 6,400,000 steps] laps: laps [56.3, 54.35]  distance 1280 m
+[eval @ 6,500,000 steps] laps: laps [55.95, 53.85]  distance 1279 m
+[eval @ 6,600,000 steps] laps: laps [56.05, 54.0]  distance 1279 m
+[eval @ 6,700,000 steps] laps: laps [55.95, 53.8]  distance 1280 m
+[eval @ 6,800,000 steps] laps: laps [55.55, 53.5]  distance 1279 m
+    new best lap 53.50 s -> saved runs/phase1_v2/best.zip
+[eval @ 6,900,000 steps] laps: laps [55.45, 53.35]  distance 1279 m
+    new best lap 53.35 s -> saved runs/phase1_v2/best.zip
+[eval @ 7,000,000 steps] laps: laps [55.25, 53.1]  distance 1280 m
+    new best lap 53.10 s -> saved runs/phase1_v2/best.zip
+[eval @ 7,100,000 steps] laps: laps [55.55, 53.4]  distance 1280 m
+[eval @ 7,200,000 steps] laps: laps [55.55, 53.4]  distance 1280 m
+[eval @ 7,300,000 steps] laps: laps [55.95, 53.8]  distance 1280 m
+[eval @ 7,400,000 steps] laps: laps [56.0, 53.75]  distance 1279 m
+[eval @ 7,500,000 steps] laps: laps [55.85, 53.55]  distance 1280 m
+[eval @ 7,600,000 steps] laps: laps [55.9, 53.8]  distance 1279 m
+[eval @ 7,700,000 steps] laps: laps [55.8, 53.7]  distance 1280 m
+[eval @ 7,800,000 steps] laps: laps [55.45, 53.55]  distance 1280 m
+[eval @ 7,900,000 steps] laps: laps [55.7, 53.7]  distance 1280 m
+[eval @ 8,000,000 steps] laps: laps [55.7, 53.7]  distance 1279 m
+[eval @ 8,100,000 steps] laps: laps [55.8, 53.65]  distance 1280 m
+[eval @ 8,200,000 steps] laps: laps [55.95, 53.65]  distance 1280 m
+[eval @ 8,300,000 steps] laps: laps [55.4, 53.1]  distance 1279 m
+[eval @ 8,400,000 steps] laps: laps [55.2, 53.0]  distance 1280 m
+    new best lap 53.00 s -> saved runs/phase1_v2/best.zip
+[eval @ 8,500,000 steps] laps: laps [55.45, 53.2]  distance 1279 m
+[eval @ 8,600,000 steps] laps: laps [55.25, 53.0]  distance 1279 m
+[eval @ 8,700,000 steps] laps: laps [55.35, 53.4]  distance 1280 m
+[eval @ 8,800,000 steps] laps: laps [55.2, 53.0]  distance 1280 m
+[eval @ 8,900,000 steps] laps: laps [55.35, 53.05]  distance 1280 m
+[eval @ 9,000,000 steps] laps: laps [55.15, 53.05]  distance 1279 m
+[eval @ 9,100,000 steps] laps: laps [55.6, 53.5]  distance 1279 m
+[eval @ 9,200,000 steps] laps: laps [55.15, 52.95]  distance 1280 m
+    new best lap 52.95 s -> saved runs/phase1_v2/best.zip
+[eval @ 9,300,000 steps] laps: laps [55.65, 53.5]  distance 1279 m
+[eval @ 9,400,000 steps] laps: laps [55.6, 53.45]  distance 1280 m
+[eval @ 9,500,000 steps] off_track: laps []  distance 26 m
+[eval @ 9,600,000 steps] laps: laps [55.45, 53.45]  distance 1279 m
+[eval @ 9,700,000 steps] laps: laps [55.75, 53.6]  distance 1280 m
+[eval @ 9,800,000 steps] laps: laps [55.55, 53.5]  distance 1279 m
+[eval @ 9,900,000 steps] off_track: laps []  distance 26 m
+[eval @ 10,000,000 steps] laps: laps [55.3, 53.3]  distance 1280 m
+[eval @ 10,100,000 steps] laps: laps [55.1, 53.05]  distance 1280 m
+[eval @ 10,200,000 steps] laps: laps [55.2, 53.05]  distance 1280 m
+[eval @ 10,300,000 steps] off_track: laps []  distance 26 m
+[eval @ 10,400,000 steps] off_track: laps []  distance 27 m
+[eval @ 10,500,000 steps] laps: laps [55.55, 53.55]  distance 1279 m
+[eval @ 10,600,000 steps] laps: laps [55.5, 53.6]  distance 1280 m
+[eval @ 10,700,000 steps] laps: laps [55.65, 53.75]  distance 1280 m
+[eval @ 10,800,000 steps] laps: laps [55.6, 53.65]  distance 1280 m
+[eval @ 10,900,000 steps] laps: laps [54.9, 52.85]  distance 1280 m
+    new best lap 52.85 s -> saved runs/phase1_v2/best.zip
+[eval @ 11,000,000 steps] off_track: laps []  distance 26 m
+[eval @ 11,100,000 steps] laps: laps [55.0, 53.05]  distance 1280 m
+[eval @ 11,200,000 steps] laps: laps [54.7, 52.6]  distance 1280 m
+    new best lap 52.60 s -> saved runs/phase1_v2/best.zip
+[eval @ 11,300,000 steps] laps: laps [55.0, 53.05]  distance 1280 m
+[eval @ 11,400,000 steps] laps: laps [54.95, 52.85]  distance 1280 m
+[eval @ 11,500,000 steps] laps: laps [54.8, 52.5]  distance 1280 m
+    new best lap 52.50 s -> saved runs/phase1_v2/best.zip
+[eval @ 11,600,000 steps] off_track: laps []  distance 26 m
+[eval @ 11,700,000 steps] laps: laps [55.0, 52.95]  distance 1280 m
+[eval @ 11,800,000 steps] off_track: laps []  distance 26 m
+[eval @ 11,900,000 steps] laps: laps [54.55, 52.65]  distance 1280 m
+[eval @ 12,000,000 steps] laps: laps [54.85, 52.9]  distance 1279 m
+[eval @ 12,100,000 steps] laps: laps [54.55, 52.35]  distance 1280 m
+    new best lap 52.35 s -> saved runs/phase1_v2/best.zip
+[eval @ 12,200,000 steps] laps: laps [54.7, 52.6]  distance 1280 m
+[eval @ 12,300,000 steps] laps: laps [55.0, 52.5]  distance 1280 m
+[eval @ 12,400,000 steps] laps: laps [55.25, 52.95]  distance 1279 m
+[eval @ 12,500,000 steps] laps: laps [55.4, 53.2]  distance 1280 m
+[eval @ 12,600,000 steps] laps: laps [55.0, 53.0]  distance 1280 m
+[eval @ 12,700,000 steps] laps: laps [55.2, 53.0]  distance 1280 m
+[eval @ 12,800,000 steps] laps: laps [54.95, 52.7]  distance 1279 m
+[eval @ 12,900,000 steps] laps: laps [54.95, 52.9]  distance 1280 m
+[eval @ 13,000,000 steps] laps: laps [55.1, 52.7]  distance 1279 m
+[eval @ 13,100,000 steps] laps: laps [54.9, 52.65]  distance 1280 m
+[eval @ 13,200,000 steps] laps: laps [54.8, 52.4]  distance 1279 m
+[eval @ 13,300,000 steps] laps: laps [54.95, 52.55]  distance 1279 m
+[eval @ 13,400,000 steps] laps: laps [54.9, 52.65]  distance 1279 m
+[eval @ 13,500,000 steps] laps: laps [55.35, 52.55]  distance 1280 m
+[eval @ 13,600,000 steps] laps: laps [54.75, 52.45]  distance 1280 m
+[eval @ 13,700,000 steps] laps: laps [54.7, 52.2]  distance 1280 m
+    new best lap 52.20 s -> saved runs/phase1_v2/best.zip
+[eval @ 13,800,000 steps] laps: laps [54.85, 52.45]  distance 1279 m
+[eval @ 13,900,000 steps] laps: laps [54.55, 52.1]  distance 1280 m
+    new best lap 52.10 s -> saved runs/phase1_v2/best.zip
+[eval @ 14,000,000 steps] off_track: laps [54.35]  distance 1118 m
+[eval @ 14,100,000 steps] laps: laps [54.55, 52.2]  distance 1280 m
+[eval @ 14,200,000 steps] laps: laps [54.65, 52.35]  distance 1280 m
+[eval @ 14,300,000 steps] laps: laps [54.6, 52.2]  distance 1280 m
+[eval @ 14,400,000 steps] laps: laps [54.4, 52.1]  distance 1280 m
+[eval @ 14,500,000 steps] laps: laps [54.35, 52.05]  distance 1280 m
+    new best lap 52.05 s -> saved runs/phase1_v2/best.zip
+[eval @ 14,600,000 steps] laps: laps [54.25, 51.9]  distance 1279 m
+    new best lap 51.90 s -> saved runs/phase1_v2/best.zip
+[eval @ 14,700,000 steps] laps: laps [54.3, 52.05]  distance 1280 m
+[eval @ 14,800,000 steps] laps: laps [54.45, 52.1]  distance 1279 m
+[eval @ 14,900,000 steps] laps: laps [54.45, 52.25]  distance 1280 m
+[eval @ 15,000,000 steps] laps: laps [54.6, 52.4]  distance 1279 m
+[eval @ 15,100,000 steps] laps: laps [54.6, 52.3]  distance 1280 m
+[eval @ 15,200,000 steps] laps: laps [54.5, 52.35]  distance 1279 m
+[eval @ 15,300,000 steps] laps: laps [54.35, 52.15]  distance 1279 m
+[eval @ 15,400,000 steps] laps: laps [54.4, 52.15]  distance 1279 m
+[eval @ 15,500,000 steps] laps: laps [54.55, 52.3]  distance 1280 m
+[eval @ 15,600,000 steps] laps: laps [54.5, 52.15]  distance 1280 m
+[eval @ 15,700,000 steps] laps: laps [54.4, 52.05]  distance 1279 m
+[eval @ 15,800,000 steps] laps: laps [54.4, 52.15]  distance 1280 m
+[eval @ 15,900,000 steps] laps: laps [54.25, 52.0]  distance 1279 m
+[eval @ 16,000,000 steps] laps: laps [54.35, 52.1]  distance 1279 m
+[eval @ 16,100,000 steps] laps: laps [54.35, 52.2]  distance 1280 m
+[eval @ 16,200,000 steps] laps: laps [54.25, 52.1]  distance 1280 m
+[eval @ 16,300,000 steps] laps: laps [54.35, 52.05]  distance 1280 m
+[eval @ 16,400,000 steps] laps: laps [54.3, 52.05]  distance 1279 m
+[eval @ 16,500,000 steps] laps: laps [54.35, 52.05]  distance 1280 m
+[eval @ 16,600,000 steps] laps: laps [54.35, 52.2]  distance 1280 m
+[eval @ 16,700,000 steps] laps: laps [54.4, 52.15]  distance 1280 m
+[eval @ 16,800,000 steps] laps: laps [54.5, 52.2]  distance 1279 m
+[eval @ 16,900,000 steps] laps: laps [54.4, 52.1]  distance 1279 m
+[eval @ 17,000,000 steps] laps: laps [54.6, 52.3]  distance 1280 m
+[eval @ 17,100,000 steps] laps: laps [54.3, 52.2]  distance 1279 m
+[eval @ 17,200,000 steps] laps: laps [54.6, 52.45]  distance 1279 m
+[eval @ 17,300,000 steps] laps: laps [54.45, 52.35]  distance 1280 m
+[eval @ 17,400,000 steps] laps: laps [54.4, 52.3]  distance 1280 m
+[eval @ 17,500,000 steps] laps: laps [54.25, 52.1]  distance 1280 m
+[eval @ 17,600,000 steps] laps: laps [54.3, 52.2]  distance 1280 m
+[eval @ 17,700,000 steps] laps: laps [54.55, 52.25]  distance 1280 m
+[eval @ 17,800,000 steps] laps: laps [54.55, 52.35]  distance 1280 m
+[eval @ 17,900,000 steps] laps: laps [54.6, 52.35]  distance 1279 m
+[eval @ 18,000,000 steps] laps: laps [54.65, 52.35]  distance 1279 m
+[eval @ 18,100,000 steps] laps: laps [54.5, 52.3]  distance 1280 m
+[eval @ 18,200,000 steps] laps: laps [54.5, 52.4]  distance 1280 m
+[eval @ 18,300,000 steps] laps: laps [54.55, 52.35]  distance 1279 m
+[eval @ 18,400,000 steps] laps: laps [54.65, 52.5]  distance 1280 m
+[eval @ 18,500,000 steps] laps: laps [54.55, 52.35]  distance 1279 m
+[eval @ 18,600,000 steps] laps: laps [54.7, 52.45]  distance 1280 m
+[eval @ 18,700,000 steps] laps: laps [54.45, 52.25]  distance 1280 m
+[eval @ 18,800,000 steps] laps: laps [54.45, 52.3]  distance 1280 m
+[eval @ 18,900,000 steps] laps: laps [54.15, 52.05]  distance 1280 m
+[eval @ 19,000,000 steps] laps: laps [54.2, 51.9]  distance 1279 m
+[eval @ 19,100,000 steps] laps: laps [54.2, 51.9]  distance 1280 m
+[eval @ 19,200,000 steps] laps: laps [54.3, 52.05]  distance 1279 m
+[eval @ 19,300,000 steps] laps: laps [54.25, 51.95]  distance 1279 m
+[eval @ 19,400,000 steps] laps: laps [54.35, 52.0]  distance 1280 m
+[eval @ 19,500,000 steps] laps: laps [54.3, 52.1]  distance 1280 m
+[eval @ 19,600,000 steps] laps: laps [54.3, 52.0]  distance 1279 m
+[eval @ 19,700,000 steps] laps: laps [54.3, 52.1]  distance 1279 m
+[eval @ 19,800,000 steps] laps: laps [54.3, 52.05]  distance 1280 m
+[eval @ 19,900,000 steps] laps: laps [54.15, 52.05]  distance 1280 m
+[eval @ 20,000,000 steps] laps: laps [54.4, 52.1]  distance 1280 m
+[eval @ 20,100,000 steps] laps: laps [54.4, 52.15]  distance 1279 m
+[eval @ 20,200,000 steps] laps: laps [54.45, 52.2]  distance 1280 m
+[eval @ 20,300,000 steps] off_track: laps []  distance 43 m
+[eval @ 20,400,000 steps] laps: laps [54.4, 52.3]  distance 1279 m
+[eval @ 20,500,000 steps] laps: laps [54.4, 52.15]  distance 1280 m
+[eval @ 20,600,000 steps] laps: laps [54.45, 52.2]  distance 1280 m
+[eval @ 20,700,000 steps] laps: laps [54.6, 52.25]  distance 1280 m
+[eval @ 20,800,000 steps] laps: laps [54.55, 52.15]  distance 1279 m
+[eval @ 20,900,000 steps] laps: laps [54.6, 52.35]  distance 1279 m
+[eval @ 21,000,000 steps] laps: laps [54.75, 52.4]  distance 1279 m
+[eval @ 21,100,000 steps] laps: laps [54.4, 52.25]  distance 1280 m
+[eval @ 21,200,000 steps] laps: laps [54.45, 52.25]  distance 1280 m
+[eval @ 21,300,000 steps] laps: laps [54.3, 52.0]  distance 1280 m
+[eval @ 21,400,000 steps] laps: laps [54.15, 51.95]  distance 1279 m
+[eval @ 21,500,000 steps] laps: laps [54.35, 52.05]  distance 1279 m
+[eval @ 21,600,000 steps] laps: laps [54.35, 52.2]  distance 1280 m
+[eval @ 21,700,000 steps] laps: laps [54.35, 52.05]  distance 1279 m
+[eval @ 21,800,000 steps] laps: laps [54.35, 52.15]  distance 1279 m
+[eval @ 21,900,000 steps] laps: laps [54.4, 52.2]  distance 1280 m
+[eval @ 22,000,000 steps] laps: laps [54.4, 52.15]  distance 1280 m
+[eval @ 22,100,000 steps] laps: laps [54.25, 52.0]  distance 1279 m
+[eval @ 22,200,000 steps] laps: laps [54.3, 52.1]  distance 1280 m
+[eval @ 22,300,000 steps] laps: laps [54.2, 51.85]  distance 1280 m
+    new best lap 51.85 s -> saved runs/phase1_v2/best.zip
+[eval @ 22,400,000 steps] laps: laps [54.45, 52.35]  distance 1280 m
+[eval @ 22,500,000 steps] laps: laps [54.45, 52.25]  distance 1279 m
+[eval @ 22,600,000 steps] laps: laps [54.5, 52.35]  distance 1279 m
+[eval @ 22,700,000 steps] laps: laps [54.35, 52.15]  distance 1280 m
+[eval @ 22,800,000 steps] laps: laps [54.4, 52.2]  distance 1280 m
+[eval @ 22,900,000 steps] laps: laps [54.5, 52.3]  distance 1280 m
+[eval @ 23,000,000 steps] laps: laps [54.45, 52.25]  distance 1279 m
+[eval @ 23,100,000 steps] laps: laps [54.45, 52.4]  distance 1280 m
+[eval @ 23,200,000 steps] laps: laps [54.3, 52.05]  distance 1279 m
+[eval @ 23,300,000 steps] laps: laps [54.35, 52.25]  distance 1280 m
+[eval @ 23,400,000 steps] laps: laps [54.3, 52.1]  distance 1280 m
+[eval @ 23,500,000 steps] laps: laps [54.4, 52.1]  distance 1280 m
+[eval @ 23,600,000 steps] laps: laps [54.5, 52.25]  distance 1280 m
+[eval @ 23,700,000 steps] laps: laps [54.35, 52.05]  distance 1279 m
+[eval @ 23,800,000 steps] laps: laps [54.3, 52.05]  distance 1280 m
+[eval @ 23,900,000 steps] laps: laps [54.35, 52.1]  distance 1280 m
+[eval @ 24,000,000 steps] laps: laps [54.4, 52.25]  distance 1279 m
+[eval @ 24,100,000 steps] laps: laps [54.5, 52.3]  distance 1280 m
+[eval @ 24,200,000 steps] laps: laps [54.4, 52.15]  distance 1279 m
+[eval @ 24,300,000 steps] laps: laps [54.25, 52.15]  distance 1280 m
+[eval @ 24,400,000 steps] laps: laps [54.3, 52.05]  distance 1279 m
+[eval @ 24,500,000 steps] laps: laps [54.15, 52.0]  distance 1280 m
+[eval @ 24,600,000 steps] laps: laps [54.25, 52.05]  distance 1280 m
+[eval @ 24,700,000 steps] laps: laps [54.3, 52.05]  distance 1280 m
+[eval @ 24,800,000 steps] laps: laps [54.4, 52.15]  distance 1280 m
+[eval @ 24,900,000 steps] laps: laps [54.45, 52.2]  distance 1280 m
+[eval @ 25,000,000 steps] laps: laps [54.5, 52.3]  distance 1280 m
+[eval @ 25,100,000 steps] laps: laps [54.5, 52.25]  distance 1280 m
+[eval @ 25,200,000 steps] laps: laps [54.5, 52.3]  distance 1279 m
+[eval @ 25,300,000 steps] laps: laps [54.4, 52.1]  distance 1279 m
+[eval @ 25,400,000 steps] laps: laps [54.45, 52.15]  distance 1280 m
+[eval @ 25,500,000 steps] laps: laps [54.4, 52.15]  distance 1280 m
+[eval @ 25,600,000 steps] laps: laps [54.5, 52.05]  distance 1280 m
+[eval @ 25,700,000 steps] laps: laps [54.5, 52.35]  distance 1280 m
+[eval @ 25,800,000 steps] laps: laps [54.5, 52.25]  distance 1280 m
+[eval @ 25,900,000 steps] laps: laps [54.4, 52.3]  distance 1280 m
+[eval @ 26,000,000 steps] laps: laps [54.45, 52.25]  distance 1280 m
+[eval @ 26,100,000 steps] laps: laps [54.45, 52.15]  distance 1279 m
+[eval @ 26,200,000 steps] laps: laps [54.35, 52.1]  distance 1280 m
+[eval @ 26,300,000 steps] laps: laps [54.35, 52.1]  distance 1280 m
+[eval @ 26,400,000 steps] laps: laps [54.3, 52.05]  distance 1280 m
+[eval @ 26,500,000 steps] laps: laps [54.3, 52.05]  distance 1279 m
+[eval @ 26,600,000 steps] laps: laps [54.25, 52.05]  distance 1280 m
+[eval @ 26,700,000 steps] laps: laps [54.3, 52.15]  distance 1280 m
+[eval @ 26,800,000 steps] laps: laps [54.3, 52.1]  distance 1280 m
+[eval @ 26,900,000 steps] laps: laps [54.3, 52.15]  distance 1279 m
+[eval @ 27,000,000 steps] laps: laps [54.35, 52.05]  distance 1280 m
+[eval @ 27,100,000 steps] laps: laps [54.3, 52.2]  distance 1280 m
+[eval @ 27,200,000 steps] laps: laps [54.3, 52.05]  distance 1280 m
+[eval @ 27,300,000 steps] laps: laps [54.3, 52.1]  distance 1280 m
+[eval @ 27,400,000 steps] laps: laps [54.3, 52.0]  distance 1280 m
+[eval @ 27,500,000 steps] laps: laps [54.2, 52.0]  distance 1279 m
+[eval @ 27,600,000 steps] laps: laps [54.15, 52.0]  distance 1280 m
+[eval @ 27,700,000 steps] laps: laps [54.1, 51.9]  distance 1279 m
+[eval @ 27,800,000 steps] laps: laps [54.15, 51.95]  distance 1280 m
+[eval @ 27,900,000 steps] laps: laps [54.25, 52.25]  distance 1280 m
+[eval @ 28,000,000 steps] laps: laps [54.3, 52.25]  distance 1280 m
+[eval @ 28,100,000 steps] laps: laps [54.3, 52.3]  distance 1280 m
+[eval @ 28,200,000 steps] laps: laps [54.3, 52.1]  distance 1280 m
+[eval @ 28,300,000 steps] laps: laps [54.3, 52.1]  distance 1280 m
+[eval @ 28,400,000 steps] laps: laps [54.25, 52.05]  distance 1280 m
+[eval @ 28,500,000 steps] laps: laps [54.2, 52.0]  distance 1279 m
+[eval @ 28,600,000 steps] laps: laps [54.25, 52.1]  distance 1279 m
+[eval @ 28,700,000 steps] laps: laps [54.25, 52.05]  distance 1280 m
+[eval @ 28,800,000 steps] laps: laps [54.15, 52.0]  distance 1279 m
+[eval @ 28,900,000 steps] laps: laps [54.2, 52.1]  distance 1279 m
+[eval @ 29,000,000 steps] laps: laps [54.25, 52.0]  distance 1279 m
+[eval @ 29,100,000 steps] laps: laps [54.15, 52.1]  distance 1280 m
+[eval @ 29,200,000 steps] laps: laps [54.2, 51.95]  distance 1280 m
+[eval @ 29,300,000 steps] laps: laps [54.25, 52.0]  distance 1280 m
+[eval @ 29,400,000 steps] laps: laps [54.35, 52.05]  distance 1280 m
+[eval @ 29,500,000 steps] laps: laps [54.25, 52.0]  distance 1280 m
+[eval @ 29,600,000 steps] laps: laps [54.15, 52.05]  distance 1279 m
+[eval @ 29,700,000 steps] laps: laps [54.25, 52.05]  distance 1280 m
+[eval @ 29,800,000 steps] laps: laps [54.2, 52.05]  distance 1280 m
+[eval @ 29,900,000 steps] laps: laps [54.25, 52.0]  distance 1280 m
+[eval @ 30,000,000 steps] laps: laps [54.15, 52.0]  distance 1280 m
+done: 30,003,200 steps in 67.6 min (7392 steps/s)
+models: runs/phase1_v2/checkpoints/last.zip  best: runs/phase1_v2/best.zip
+training finished - the viewer keeps driving the final policy (Ctrl+C to quit)

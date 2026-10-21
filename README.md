@@ -6,7 +6,7 @@ ein Rennen mit Reifenverschleiss, Boxenstopps und Boost zu gewinnen.
 
 | Phase | Ziel | Status |
 |---|---|---|
-| 1 | Fahren lernen, schnellste Rundenzeit (`KartLap-v0`) | fertig – PPO, 30 Mio Schritte: **51.05 s** (Ideallinien-Referenz 54.1 s) |
+| 1 | Fahren lernen, schnellste Rundenzeit (`KartLap-v0`) | fertig – PPO, 40 Mio Schritte: **50.95 s** (Ideallinien-Referenz 54.1 s; seither strengere Bandenregel, siehe unten) |
 | 2 | Rennen: Reifenmischungen Soft/Medium/Hard, Verschleiss, Boxenstopps, Strategie | geplant |
 | 3 | Begrenzter Boost: wann, wo, wie viel | geplant |
 
@@ -80,7 +80,38 @@ python scripts/play_baseline.py --follow                              # Referenz
 ```
 
 Referenz-Rundenzeiten (geskriptete Fahrer, gleiches Kart-Modell): Mittellinie 71.6 s,
-berechnete Ideallinie 54.1 s, theoretisches Modell-Optimum ≈ 49.8 s.
+berechnete Ideallinie 54.6 s, theoretisches Modell-Optimum ≈ 49.6 s.
+
+**Bandenregel:** Kein Teil des Karts darf die Bande berühren – geprüft wird die ganze Kontur
+(1.90 × 1.40 m), jeder Kontakt kostet −20 und beendet die Episode (`docs/simulation.md`). Die
+ersten Läufe (`phase1_*`, bis 40 Mio Schritte, 50.95 s) entstanden noch mit der alten Regel
+(nur der Mittelpunkt zählte) und müssen unter der neuen kurz weitertrainiert werden.
+
+## Experiment-Dashboard (ohne Terminal)
+
+```bash
+python -m kart_rl.dashboard            # öffnet http://localhost:8080/
+```
+
+Webseite zum Anlegen, Starten, Beobachten und Vergleichen von Experimenten: Lernrate und alle
+anderen Hyperparameter, Reward-Gewichte, Lidar, Episodenlänge und Kart-Physik per Formular (mit
+Erklärung und Basiswert), Trainer SB3/eigener PPO/PBT, Live-3D, Curriculum, Weitertrainieren.
+Jeder Start schreibt `train/configs/<name>.yaml` und startet das Training als eigenen Prozess;
+die Tabelle zeigt alle Läufe unter `runs/` mit Rundenzeit, Status, Log und Config, das Chart
+vergleicht die Lernkurven. Configs + `runs/<name>/eval.csv` + `best.zip` pushen, dann sehen die
+anderen die Läufe nach `git pull` in ihrem Dashboard und können darauf aufbauen (`docs/viewer.md`).
+
+## Selbst fahren: Mensch gegen KI (Spiel-Modus)
+
+```bash
+python -m kart_rl.game --policy runs/phase1_v2/best.zip --name Jeremy --open   # oder im Dashboard «Selbst fahren»
+```
+
+Dasselbe Kart, dieselbe Physik, dieselbe Bande – nur mit Tastatur (Pfeiltasten/WASD) statt Policy.
+Das Modell fährt als Geist mit, Rundenzeiten werden verglichen und geloggt (`runs/human/laps.csv`,
+Tabelle «Mensch gegen KI» im Dashboard), jeder Lauf wird als Replay gespeichert (`replays/human/`).
+Optionaler Zusatz: `train/learn_from_human.py` klont deine Runden, die schneller als die KI waren,
+per Behaviour Cloning in die Policy, die danach normal weitertrainiert wird (`docs/viewer.md`).
 
 ## Mehr, länger und schneller trainieren
 
@@ -129,11 +160,14 @@ kart_rl/                 Python-Paket
   render/viewer2d.py     2D-Viewer (matplotlib)
   evaluation.py, agents.py   Auswertung, Laden von Modellen
   live/                  Websocket-Streaming (Training) und Live-Server mit Parameter-Panel
+  game/                  Spiel-Modus: Tastatur gegen das Modell, Rundenzeiten, Replays, Demos
+  dashboard/             Experiment-Dashboard (Webseite: Parameter, Start/Stop, Vergleich)
   data/                  Streckendaten (JSON + Maske), Ideallinie
 viewer/                  3D-Viewer (Three.js, Browser)
 train/
   train_sb3.py           Training mit Stable-Baselines3 (PPO oder SAC), Curriculum, Streaming
   ppo_scratch.py         eigener PPO in PyTorch
+  learn_from_human.py    Zusatz: Behaviour Cloning aus eigenen Runden (Spiel-Modus)
   configs/*.yaml         Baseline und Experimente
 scripts/                 evaluate.py, watch_training.py, play_baseline.py, serve_viewer.py, make_video.py, compare_runs.py
 tools/                   extract_track.py (Bild → Strecke), compute_raceline.py
@@ -149,5 +183,5 @@ runs/                    Trainingsläufe (Checkpoints/TensorBoard sind git-ignor
 - `docs/strecke.md` – Streckenextraktion, Koordinatensystem, Datenformat
 - `docs/simulation.md` – Kart-Modell, Beobachtung, Aktion, Reward, Episoden
 - `docs/ideallinie.md` – berechnete Ideallinie als Vergleich
-- `docs/viewer.md` – 3D-Viewer (Replay, Training live, Live-Server), Video
+- `docs/viewer.md` – 3D-Viewer (Replay, Training live, Live-Server, Spiel-Modus), Experiment-Dashboard, Video
 - `docs/experimente.md` – Stand der Technik und Experimentplan

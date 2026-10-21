@@ -141,6 +141,8 @@ def open_viewer(http_port: int = 8000, ws_port: int = 8765, open_browser: bool =
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[2]
+    if http_port <= 0:  # started from the dashboard, which serves the viewer itself
+        return f"(viewer served by the dashboard) ws port {ws_port}"
     url = f"http://localhost:{http_port}/viewer/?live&ws={ws_port}"
     try:
         handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(root))

@@ -15,6 +15,8 @@ runs/*/checkpoints/
 runs/*/tensorboard/
 runs/*.log
 replays/*.json
+replays/human/*_demo.json     # demos for learn_from_human.py (big, local)
+runs/human/game.log
 
 # OS / IDE
 .DS_Store
