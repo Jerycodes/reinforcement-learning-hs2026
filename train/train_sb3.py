@@ -45,15 +45,24 @@ def make_env_fn(env_cfg: dict, seed: int, rank: int):
 class LapTimeEval(BaseCallback):
     """Every ``every`` env steps: deterministic standing-start run, log lap time, keep best model."""
 
-    def __init__(self, env_cfg: dict, every: int, laps: int, run_dir: Path, verbose: int = 1):
+    def __init__(self, env_cfg: dict, every: int, laps: int, run_dir: Path, verbose: int = 1, resume: bool = False):
         super().__init__(verbose)
         self.env_cfg, self.every, self.laps, self.run_dir = env_cfg, every, laps, run_dir
         self.next_eval = every
         self.best = float("inf")
         self.csv_path = run_dir / "eval.csv"
-        with open(self.csv_path, "w", newline="") as f:
-            csv.writer(f).writerow(["timesteps", "wall_s", "episode_done", "standing_lap", "best_flying_lap",
-                                    "distance_m"])
+        if resume and self.csv_path.exists():
+            # keep the history and the best lap so far
+            rows = list(csv.DictReader(open(self.csv_path)))
+            laps_done = [float(r["best_flying_lap"]) for r in rows if r.get("best_flying_lap") not in ("", None, "inf")]
+            if laps_done:
+                self.best = min(laps_done)
+            if rows:
+                self.next_eval = (int(rows[-1]["timesteps"]) // every + 1) * every
+        else:
+            with open(self.csv_path, "w", newline="") as f:
+                csv.writer(f).writerow(["timesteps", "wall_s", "episode_done", "standing_lap", "best_flying_lap",
+                                        "distance_m"])
         self.t0 = time.time()
 
     def _on_step(self) -> bool:
@@ -118,13 +127,19 @@ class LiveStream(BaseCallback):
         print(f"live stream on ws://localhost:{port}")
 
     def _on_training_start(self) -> None:
+        self.start_showcase(self.model)
+
+    def start_showcase(self, model) -> None:
+        """Start the real-time showcase kart (idempotent)."""
+        if self.showcase is not None:
+            return
         import copy
 
         import torch
 
         from kart_rl.live.stream import Showcase
 
-        model = self.model
+        self.model = model
         low, high = model.action_space.low, model.action_space.high
         # The showcase thread uses its own copy of the policy: SB3 policies keep the
         # action distribution as shared state, so calling the training policy from
@@ -241,6 +256,8 @@ def main():
     ap.add_argument("--n-envs", type=int, default=None)
     ap.add_argument("--seed", type=int, default=None)
     ap.add_argument("--resume", default=None, help="model .zip to continue training from")
+    ap.add_argument("--more", type=int, default=None,
+                    help="with --resume: train this many additional steps (instead of up to total_timesteps)")
     ap.add_argument("--subproc", action="store_true", default=None, help="force SubprocVecEnv")
     ap.add_argument("--no-subproc", dest="subproc", action="store_false")
     ap.add_argument("--stream", action="store_true",
@@ -316,7 +333,8 @@ def main():
         raise SystemExit(f"unknown algo '{algo}' (ppo | sac)")
     print(model.policy)
 
-    eval_cb = LapTimeEval(env_cfg, every=int(cfg["eval_every"]), laps=int(cfg.get("eval_laps", 2)), run_dir=run_dir)
+    eval_cb = LapTimeEval(env_cfg, every=int(cfg["eval_every"]), laps=int(cfg.get("eval_laps", 2)), run_dir=run_dir,
+                          resume=bool(args.resume))
     callbacks = [
         CheckpointCallback(save_freq=max(int(cfg["checkpoint_every"]) // n_envs, 1), save_path=str(run_dir / "checkpoints"),
                            name_prefix="step", save_vecnormalize=True),
@@ -332,11 +350,23 @@ def main():
     refs = load_reference_lap_times()
     print("reference lap times:", {k: round(v, 1) for k, v in refs.items()})
     t0 = time.time()
+    interrupted = False
+    # on --resume continue up to the configured total (or --more additional steps)
+    if args.resume and args.more:
+        remaining = int(args.more)
+    else:
+        remaining = int(cfg["total_timesteps"]) - (model.num_timesteps if args.resume else 0)
+    if remaining <= 0:
+        print(f"this run is already complete: {model.num_timesteps:,} steps >= total_timesteps "
+              f"{int(cfg['total_timesteps']):,}.\n  -> to train further add  --more 10000000  (additional steps) "
+              f"or raise --total-timesteps")
     try:
-        model.learn(total_timesteps=int(cfg["total_timesteps"]), callback=callbacks, progress_bar=False,
-                    reset_num_timesteps=not args.resume, tb_log_name=algo)
+        if remaining > 0:
+            model.learn(total_timesteps=remaining, callback=callbacks, progress_bar=False,
+                        reset_num_timesteps=not args.resume, tb_log_name=algo)
     except KeyboardInterrupt:
-        print("interrupted - saving last model")
+        interrupted = True
+        print("\ninterrupted - saving last model")
     model.save(run_dir / "checkpoints" / "last.zip")
     if isinstance(vec, VecNormalize):
         vec.save(str(run_dir / "checkpoints" / "vecnormalize.pkl"))
@@ -344,12 +374,12 @@ def main():
     print(f"done: {model.num_timesteps:,} steps in {dt / 60:.1f} min ({model.num_timesteps / max(dt, 1):.0f} steps/s)")
     print(f"models: {run_dir / 'checkpoints' / 'last.zip'}  best: {run_dir / 'best.zip'}")
     vec.close()
-    if args.stream:
+    if args.stream and not interrupted:
         # keep the showcase kart driving with the final policy until Ctrl+C
         stream_cb = next(c for c in callbacks if isinstance(c, LiveStream))
         stream_cb.finished = True
-        if stream_cb.showcase is not None:
-            stream_cb.showcase.stop_flag = False
+        stream_cb.start_showcase(model)   # also when nothing was trained (run already complete)
+        stream_cb._on_rollout_start()     # sync weights
         print("training finished - the viewer keeps driving the final policy (Ctrl+C to quit)")
         try:
             while True:

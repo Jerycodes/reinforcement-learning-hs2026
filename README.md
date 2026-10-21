@@ -6,7 +6,7 @@ ein Rennen mit Reifenverschleiss, Boxenstopps und Boost zu gewinnen.
 
 | Phase | Ziel | Status |
 |---|---|---|
-| 1 | Fahren lernen, schnellste Rundenzeit (`KartLap-v0`) | Env fertig, Training läuft |
+| 1 | Fahren lernen, schnellste Rundenzeit (`KartLap-v0`) | fertig – PPO, 30 Mio Schritte: **51.05 s** (Ideallinien-Referenz 54.1 s) |
 | 2 | Rennen: Reifenmischungen Soft/Medium/Hard, Verschleiss, Boxenstopps, Strategie | geplant |
 | 3 | Begrenzter Boost: wann, wo, wie viel | geplant |
 

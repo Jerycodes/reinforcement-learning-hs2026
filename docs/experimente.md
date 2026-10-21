@@ -63,3 +63,5 @@ python scripts/compare_runs.py runs/phase1_ppo runs/exp_sector_curriculum runs/e
 | Lauf | Maschine | Schritte | beste Rundenzeit | Bemerkung |
 |---|---|---|---|---|
 | phase1_ppo | Cloud, 2 Kerne, 4 Envs | 1.4 Mio | 57.2 s | erste Runde nach 400k Schritten; Referenz Ideallinie 54.1 s |
+| phase1_live | Mac (M-Series), 8 Envs | 3 Mio | 55.75 s | 7 Minuten; Kurve noch nicht am Ende |
+| phase1_long | Mac (M-Series), 10 Envs | 30 Mio | **51.05 s** | 64 Minuten, 7800 Schritte/s; stehende Runde 53.4 s; Plateau ab ≈ 13 Mio (51.2–51.8 s); schlägt den Ideallinien-Fahrer (54.1 s), Modell-Optimum ≈ 49.8 s |
