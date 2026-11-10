@@ -109,6 +109,45 @@ Rennmitte. Der Report zeigt die Reward-Anteile insgesamt und pro Runde;
 CSV und JSON enthalten die gleichen Werte. Höherer Gesamt-Reward ist besser.
 Kurze Pilotläufe prüfen die Pipeline; sie belegen noch keinen Lernvorteil.
 
+## Kontrollierter Vergleich der Zeitstrafe
+
+```powershell
+python scripts/compare_strategy_rewards.py --steps 256 --rollout-steps 32 --seeds 0 1 2 --jobs 3
+start runs/reward_comparison/index.html
+```
+
+Das Skript trainiert die Zeitskalen 100, 50 und 25 Sekunden getrennt, immer
+mit denselben Seeds, gleichem Entscheidungsbudget und unveränderter Physik.
+Zielbonus, Fortschrittsgewicht und zusätzliche Ausfallstrafe bleiben gleich.
+Zeitverlust wird dadurch doppelt beziehungsweise viermal so stark gewichtet.
+Bei einem Ausfall bezahlt der Agent zusätzlich das restliche Zeitbudget:
+der gesamte Ausfall-Reward beträgt bei den Standardparametern -17, -29 oder
+-53 Punkte. Ein früher Abbruch lohnt sich deshalb bei keiner der drei Skalen.
+
+Die Rangfolge im Vergleich nutzt zuerst die Zielankunftsquote, dann die
+mittlere Rennzeit der erfolgreichen Evaluationen. Ausfälle werden nicht als
+besonders schnelle Rennen eingerechnet. Reward-Summen werden zwischen den
+Skalen nicht verglichen. Die angegebene Streuung misst Unterschiede zwischen
+Trainings-Seeds; alle fahren dieselbe deterministische Strecke.
+
+Das Ergebnisverzeichnis enthält pro Kombination Modell, Parameter, Trainingslog,
+Episodenmetriken und Evaluation. `comparison.json` und `comparison.csv` enthalten
+alle Einzelwerte. Vorhandene Verzeichnisse werden nicht überschrieben.
+`--jobs` steuert parallele Trainingsprozesse; PyTorch verwendet je Prozess einen
+Thread. Die Standardkonfiguration wird nach einem kurzen Versuch nicht
+automatisch auf eine vermeintlich beste Skala umgestellt.
+
+Der ausgeführte Kurzvergleich unter `runs/reward_comparison_pilot32/` verwendet
+32 Entscheidungen pro Lauf (vier Rennen), drei Seeds und drei Skalen. Er ist
+ein erster Vergleich und ersetzt keinen längeren Versuch mit mehr Training.
+
+**Strafe bedeutet hier einen negativen Zahlenwert im Reward.** Bandenkontakt,
+falsche Fahrtrichtung und Stillstand führen bereits über die Fahrumgebung zum
+Ausfall. Eine zusätzliche Strafe auf jeden Reifenwechsel würde dagegen die
+Aufgabe verändern: Ein guter Stopp soll sich durch gesparte Rennzeit lohnen.
+Der Strategie-Agent steuert weiterhin weder Lenkung noch Gas. Für schnelleres
+Kurvenfahren muss separat die Fahr-Policy trainiert und evaluiert werden.
+
 ## Nächste Erweiterungen
 
 Reale Boxengassengeometrie und Darstellung im 3D-Viewer, Reifenmischungen,

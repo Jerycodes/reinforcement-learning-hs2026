@@ -1,0 +1,10 @@
+time_scale_s,seed,elapsed_s,finished,episode_done,pit_stops,return,report
+100,0,905.7499999997492,True,laps,7,5.942500000002507,scale_100_seed_0/evaluation/index.html
+100,1,929.3499999997325,True,laps,4,5.706500000002674,scale_100_seed_1/evaluation/index.html
+100,2,905.7499999997492,True,laps,7,5.942500000002507,scale_100_seed_2/evaluation/index.html
+50,0,905.7499999997492,True,laps,7,-3.1149999999949856,scale_50_seed_0/evaluation/index.html
+50,1,929.3499999997325,True,laps,4,-3.586999999994651,scale_50_seed_1/evaluation/index.html
+50,2,905.7499999997492,True,laps,7,-3.1149999999949856,scale_50_seed_2/evaluation/index.html
+25,0,905.7499999997492,True,laps,7,-21.22999999998997,scale_25_seed_0/evaluation/index.html
+25,1,909.299999999748,True,laps,5,-21.371999999989924,scale_25_seed_1/evaluation/index.html
+25,2,905.7499999997492,True,laps,7,-21.22999999998997,scale_25_seed_2/evaluation/index.html

@@ -1,0 +1,20 @@
+<!doctype html><html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kart-RL · Reward-Vergleich</title><style>
+body{margin:0;background:#0b1220;color:#e2e8f0;font:16px system-ui}main{max-width:1050px;margin:auto;padding:40px 20px}
+h1{font-size:clamp(28px,5vw,44px)}p,li{line-height:1.65;color:#b5c4d8}section{background:#131e30;padding:24px;border:1px solid #26354d;border-radius:14px;margin:24px 0;overflow:auto}
+table{width:100%;border-collapse:collapse;white-space:nowrap}th,td{padding:12px;text-align:left;border-bottom:1px solid #26354d}a,.tag{color:#38bdf8}
+</style><main><div class="tag">KART-RL / REWARD-LAB</div><h1>Hilft eine stärkere Zeitstrafe?</h1>
+<p>32 Strategieentscheidungen je Training · 8 Runden je Rennen ·
+Seeds 0, 1, 2 · gleiche PPO-Einstellungen und Physik.</p>
+<section><h2>Rennzeit entscheidet</h2><p>Sortiert nach Zielankunftsquote, danach mittlerer Zeit der erfolgreichen Rennen.
+Reward-Summen verschiedener Skalen sind nicht vergleichbar. Streuung = Stichproben-Standardabweichung zwischen Trainings-Seeds.</p>
+<table><tr><th>Zeitstrafe</th><th>Im Ziel</th><th>Mittlere Zeit (s)</th><th>Streuung (s)</th><th>Stopps (Mittel)</th></tr><tr><td>−1 / 25 s</td><td>3/3</td><td>906.93</td><td>2.05</td><td>6.33</td></tr><tr><td>−1 / 100 s</td><td>3/3</td><td>913.62</td><td>13.63</td><td>6.00</td></tr><tr><td>−1 / 50 s</td><td>3/3</td><td>913.62</td><td>13.63</td><td>6.00</td></tr></table></section>
+<section><h2>Was wird bestraft?</h2><p>Jede verlorene Sekunde zählt negativ, auch beim Boxenstopp.
+Bandenkontakt, falsche Fahrtrichtung, Stillstand oder Rennzeitlimit beenden das Rennen mit dem verbleibenden Zeitbudget und einer zusätzlichen Strafe von 5 Punkten.
+Zielbonus +15; Fortschrittsfeedback netto null. Keine zusätzliche Strafe für einen sinnvollen Reifenwechsel.</p><ul><li>Zeitskala 100 s: Ausfall insgesamt −17 Reward-Punkte</li><li>Zeitskala 50 s: Ausfall insgesamt −29 Reward-Punkte</li><li>Zeitskala 25 s: Ausfall insgesamt −53 Reward-Punkte</li></ul></section>
+<section><h2>Referenzstrategien</h2><ul><li>Ohne Stopp: 1142.05 s (Ziel)</li><li>Stopp nach Runde 4: 952.80 s (Ziel)</li></ul></section>
+<section><h2>Einzelne Läufe</h2><table><tr><th>Zeitskala</th><th>Seed</th><th>Status</th><th>Zeit (s)</th><th>Stopps</th><th>Details</th></tr><tr><td>100 s</td><td>0</td><td>Ziel</td><td>905.75</td><td>7</td><td><a href="scale_100_seed_0/evaluation/index.html">Lauf öffnen</a></td></tr><tr><td>100 s</td><td>1</td><td>Ziel</td><td>929.35</td><td>4</td><td><a href="scale_100_seed_1/evaluation/index.html">Lauf öffnen</a></td></tr><tr><td>100 s</td><td>2</td><td>Ziel</td><td>905.75</td><td>7</td><td><a href="scale_100_seed_2/evaluation/index.html">Lauf öffnen</a></td></tr><tr><td>50 s</td><td>0</td><td>Ziel</td><td>905.75</td><td>7</td><td><a href="scale_50_seed_0/evaluation/index.html">Lauf öffnen</a></td></tr><tr><td>50 s</td><td>1</td><td>Ziel</td><td>929.35</td><td>4</td><td><a href="scale_50_seed_1/evaluation/index.html">Lauf öffnen</a></td></tr><tr><td>50 s</td><td>2</td><td>Ziel</td><td>905.75</td><td>7</td><td><a href="scale_50_seed_2/evaluation/index.html">Lauf öffnen</a></td></tr><tr><td>25 s</td><td>0</td><td>Ziel</td><td>905.75</td><td>7</td><td><a href="scale_25_seed_0/evaluation/index.html">Lauf öffnen</a></td></tr><tr><td>25 s</td><td>1</td><td>Ziel</td><td>909.30</td><td>5</td><td><a href="scale_25_seed_1/evaluation/index.html">Lauf öffnen</a></td></tr><tr><td>25 s</td><td>2</td><td>Ziel</td><td>905.75</td><td>7</td><td><a href="scale_25_seed_2/evaluation/index.html">Lauf öffnen</a></td></tr></table></section>
+<p>Kurze Trainingsläufe sind ein Pilotversuch, kein Nachweis einer optimalen Reward-Funktion.
+Die Seeds variieren das Lernen; die Evaluationsstrecke selbst ist deterministisch. Der Fahrer ist fest programmiert:
+Dieser Vergleich untersucht Boxenentscheidungen, nicht das Lernen von Lenkung und Bremspunkten.</p>
+<p><a href="comparison.json">JSON</a> · <a href="comparison.csv">CSV</a></p></main></html>

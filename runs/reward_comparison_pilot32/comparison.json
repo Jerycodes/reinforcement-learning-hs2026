@@ -1,0 +1,394 @@
+{
+  "experiment": {
+    "scales": [
+      100,
+      50,
+      25
+    ],
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "steps": 32,
+    "rollout_steps": 16,
+    "laps": 8,
+    "jobs": 3
+  },
+  "summary": [
+    {
+      "time_scale_s": 25,
+      "runs": 3,
+      "finished": 3,
+      "mean_s": 906.9333333330821,
+      "std_s": 2.049593455622489,
+      "mean_stops": 6.333333333333333
+    },
+    {
+      "time_scale_s": 100,
+      "runs": 3,
+      "finished": 3,
+      "mean_s": 913.6166666664103,
+      "std_s": 13.625466352865532,
+      "mean_stops": 6
+    },
+    {
+      "time_scale_s": 50,
+      "runs": 3,
+      "finished": 3,
+      "mean_s": 913.6166666664103,
+      "std_s": 13.625466352865532,
+      "mean_stops": 6
+    }
+  ],
+  "trials": [
+    {
+      "time_scale_s": 100,
+      "seed": 0,
+      "elapsed_s": 905.7499999997492,
+      "finished": true,
+      "episode_done": "laps",
+      "pit_stops": 7,
+      "return": 5.942500000002507,
+      "report": "scale_100_seed_0/evaluation/index.html"
+    },
+    {
+      "time_scale_s": 100,
+      "seed": 1,
+      "elapsed_s": 929.3499999997325,
+      "finished": true,
+      "episode_done": "laps",
+      "pit_stops": 4,
+      "return": 5.706500000002674,
+      "report": "scale_100_seed_1/evaluation/index.html"
+    },
+    {
+      "time_scale_s": 100,
+      "seed": 2,
+      "elapsed_s": 905.7499999997492,
+      "finished": true,
+      "episode_done": "laps",
+      "pit_stops": 7,
+      "return": 5.942500000002507,
+      "report": "scale_100_seed_2/evaluation/index.html"
+    },
+    {
+      "time_scale_s": 50,
+      "seed": 0,
+      "elapsed_s": 905.7499999997492,
+      "finished": true,
+      "episode_done": "laps",
+      "pit_stops": 7,
+      "return": -3.1149999999949856,
+      "report": "scale_50_seed_0/evaluation/index.html"
+    },
+    {
+      "time_scale_s": 50,
+      "seed": 1,
+      "elapsed_s": 929.3499999997325,
+      "finished": true,
+      "episode_done": "laps",
+      "pit_stops": 4,
+      "return": -3.586999999994651,
+      "report": "scale_50_seed_1/evaluation/index.html"
+    },
+    {
+      "time_scale_s": 50,
+      "seed": 2,
+      "elapsed_s": 905.7499999997492,
+      "finished": true,
+      "episode_done": "laps",
+      "pit_stops": 7,
+      "return": -3.1149999999949856,
+      "report": "scale_50_seed_2/evaluation/index.html"
+    },
+    {
+      "time_scale_s": 25,
+      "seed": 0,
+      "elapsed_s": 905.7499999997492,
+      "finished": true,
+      "episode_done": "laps",
+      "pit_stops": 7,
+      "return": -21.22999999998997,
+      "report": "scale_25_seed_0/evaluation/index.html"
+    },
+    {
+      "time_scale_s": 25,
+      "seed": 1,
+      "elapsed_s": 909.299999999748,
+      "finished": true,
+      "episode_done": "laps",
+      "pit_stops": 5,
+      "return": -21.371999999989924,
+      "report": "scale_25_seed_1/evaluation/index.html"
+    },
+    {
+      "time_scale_s": 25,
+      "seed": 2,
+      "elapsed_s": 905.7499999997492,
+      "finished": true,
+      "episode_done": "laps",
+      "pit_stops": 7,
+      "return": -21.22999999998997,
+      "report": "scale_25_seed_2/evaluation/index.html"
+    }
+  ],
+  "references": {
+    "Ohne Stopp": {
+      "elapsed_s": 1142.049999999509,
+      "wear": 1.0,
+      "grip": 0.55,
+      "pit_stops": 0,
+      "laps_done": 8,
+      "finished": true,
+      "episode_done": "laps",
+      "history": [
+        {
+          "lap": 1,
+          "duration_s": 103.89999999999624,
+          "pit": false,
+          "wear_start": 0.0,
+          "wear_end": 0.18013431315256442,
+          "completed": true,
+          "reward": -0.7889999999999624,
+          "reward_time": -1.0389999999999624,
+          "reward_progress": 0.25,
+          "reward_finish": 0.0,
+          "reward_failure": 0.0
+        },
+        {
+          "lap": 2,
+          "duration_s": 111.05000000001839,
+          "pit": false,
+          "wear_start": 0.18013431315256442,
+          "wear_end": 0.3600796448999278,
+          "completed": true,
+          "reward": -0.8605000000001839,
+          "reward_time": -1.110500000000184,
+          "reward_progress": 0.25,
+          "reward_finish": 0.0,
+          "reward_failure": 0.0
+        },
+        {
+          "lap": 3,
+          "duration_s": 121.55000000002761,
+          "pit": false,
+          "wear_start": 0.3600796448999278,
+          "wear_end": 0.5401145452229401,
+          "completed": true,
+          "reward": -0.965500000000276,
+          "reward_time": -1.215500000000276,
+          "reward_progress": 0.25,
+          "reward_finish": 0.0,
+          "reward_failure": 0.0
+        },
+        {
+          "lap": 4,
+          "duration_s": 134.5500000000306,
+          "pit": false,
+          "wear_start": 0.5401145452229401,
+          "wear_end": 0.720049435744161,
+          "completed": true,
+          "reward": -1.095500000000306,
+          "reward_time": -1.345500000000306,
+          "reward_progress": 0.25,
+          "reward_finish": 0.0,
+          "reward_failure": 0.0
+        },
+        {
+          "lap": 5,
+          "duration_s": 151.3999999999088,
+          "pit": false,
+          "wear_start": 0.720049435744161,
+          "wear_end": 0.9000878534176154,
+          "completed": true,
+          "reward": -1.263999999999088,
+          "reward_time": -1.513999999999088,
+          "reward_progress": 0.25,
+          "reward_finish": 0.0,
+          "reward_failure": 0.0
+        },
+        {
+          "lap": 6,
+          "duration_s": 170.79999999984466,
+          "pit": false,
+          "wear_start": 0.9000878534176154,
+          "wear_end": 1.0,
+          "completed": true,
+          "reward": -1.4579999999984465,
+          "reward_time": -1.7079999999984465,
+          "reward_progress": 0.25,
+          "reward_finish": 0.0,
+          "reward_failure": 0.0
+        },
+        {
+          "lap": 7,
+          "duration_s": 174.39999999984138,
+          "pit": false,
+          "wear_start": 1.0,
+          "wear_end": 1.0,
+          "completed": true,
+          "reward": -1.493999999998414,
+          "reward_time": -1.743999999998414,
+          "reward_progress": 0.25,
+          "reward_finish": 0.0,
+          "reward_failure": 0.0
+        },
+        {
+          "lap": 8,
+          "duration_s": 174.39999999984138,
+          "pit": false,
+          "wear_start": 1.0,
+          "wear_end": 1.0,
+          "completed": true,
+          "reward": 11.506000000001587,
+          "reward_time": -1.743999999998414,
+          "reward_progress": -1.75,
+          "reward_finish": 15.0,
+          "reward_failure": 0.0
+        }
+      ],
+      "reward_components": {
+        "time": -1.743999999998414,
+        "progress": -1.75,
+        "finish": 15.0,
+        "failure": 0.0
+      },
+      "reward_totals": {
+        "time": -11.42049999999509,
+        "progress": 0.0,
+        "finish": 15.0,
+        "failure": 0.0
+      },
+      "return": 3.5795000000049093
+    },
+    "Stopp nach Runde 4": {
+      "elapsed_s": 952.7999999996784,
+      "wear": 0.7199983289136612,
+      "grip": 0.6760007519888525,
+      "pit_stops": 1,
+      "laps_done": 8,
+      "finished": true,
+      "episode_done": "laps",
+      "history": [
+        {
+          "lap": 1,
+          "duration_s": 103.89999999999624,
+          "pit": false,
+          "wear_start": 0.0,
+          "wear_end": 0.18013431315256442,
+          "completed": true,
+          "reward": -0.7889999999999624,
+          "reward_time": -1.0389999999999624,
+          "reward_progress": 0.25,
+          "reward_finish": 0.0,
+          "reward_failure": 0.0
+        },
+        {
+          "lap": 2,
+          "duration_s": 111.05000000001839,
+          "pit": false,
+          "wear_start": 0.18013431315256442,
+          "wear_end": 0.3600796448999278,
+          "completed": true,
+          "reward": -0.8605000000001839,
+          "reward_time": -1.110500000000184,
+          "reward_progress": 0.25,
+          "reward_finish": 0.0,
+          "reward_failure": 0.0
+        },
+        {
+          "lap": 3,
+          "duration_s": 121.55000000002761,
+          "pit": false,
+          "wear_start": 0.3600796448999278,
+          "wear_end": 0.5401145452229401,
+          "completed": true,
+          "reward": -0.965500000000276,
+          "reward_time": -1.215500000000276,
+          "reward_progress": 0.25,
+          "reward_finish": 0.0,
+          "reward_failure": 0.0
+        },
+        {
+          "lap": 4,
+          "duration_s": 134.5500000000306,
+          "pit": false,
+          "wear_start": 0.5401145452229401,
+          "wear_end": 0.720049435744161,
+          "completed": true,
+          "reward": -1.095500000000306,
+          "reward_time": -1.345500000000306,
+          "reward_progress": 0.25,
+          "reward_finish": 0.0,
+          "reward_failure": 0.0
+        },
+        {
+          "lap": 5,
+          "duration_s": 114.6499999999395,
+          "pit": true,
+          "wear_start": 0.0,
+          "wear_end": 0.18001811789602665,
+          "completed": true,
+          "reward": -0.896499999999395,
+          "reward_time": -1.146499999999395,
+          "reward_progress": 0.25,
+          "reward_finish": 0.0,
+          "reward_failure": 0.0
+        },
+        {
+          "lap": 6,
+          "duration_s": 111.049999999899,
+          "pit": false,
+          "wear_start": 0.18001811789602665,
+          "wear_end": 0.35996433968835995,
+          "completed": true,
+          "reward": -0.86049999999899,
+          "reward_time": -1.11049999999899,
+          "reward_progress": 0.25,
+          "reward_finish": 0.0,
+          "reward_failure": 0.0
+        },
+        {
+          "lap": 7,
+          "duration_s": 121.54999999988945,
+          "pit": false,
+          "wear_start": 0.35996433968835995,
+          "wear_end": 0.5400649544261938,
+          "completed": true,
+          "reward": -0.9654999999988945,
+          "reward_time": -1.2154999999988945,
+          "reward_progress": 0.25,
+          "reward_finish": 0.0,
+          "reward_failure": 0.0
+        },
+        {
+          "lap": 8,
+          "duration_s": 134.49999999987767,
+          "pit": false,
+          "wear_start": 0.5400649544261938,
+          "wear_end": 0.7199983289136612,
+          "completed": true,
+          "reward": 11.905000000001223,
+          "reward_time": -1.3449999999987767,
+          "reward_progress": -1.75,
+          "reward_finish": 15.0,
+          "reward_failure": 0.0
+        }
+      ],
+      "reward_components": {
+        "time": -1.3449999999987767,
+        "progress": -1.75,
+        "finish": 15.0,
+        "failure": 0.0
+      },
+      "reward_totals": {
+        "time": -9.527999999996783,
+        "progress": 0.0,
+        "finish": 15.0,
+        "failure": 0.0
+      },
+      "return": 5.472000000003216
+    }
+  }
+}

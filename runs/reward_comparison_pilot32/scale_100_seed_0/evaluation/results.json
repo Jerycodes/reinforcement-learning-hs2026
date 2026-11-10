@@ -1,0 +1,143 @@
+{
+  "config": {
+    "laps": 8,
+    "pit_loss_s": 12.0,
+    "wear_per_lap": 0.18,
+    "min_grip": 0.55,
+    "max_time_s": 1200.0,
+    "reward_time_scale_s": 100.0,
+    "reward_progress": 2.0,
+    "reward_finish": 15.0,
+    "reward_failure": 5.0
+  },
+  "results": {
+    "PPO-Strategie": {
+      "elapsed_s": 905.7499999997492,
+      "wear": 0.17999912902977067,
+      "grip": 0.9190003919366032,
+      "pit_stops": 7,
+      "laps_done": 8,
+      "finished": true,
+      "episode_done": "laps",
+      "history": [
+        {
+          "lap": 1,
+          "duration_s": 103.89999999999624,
+          "pit": false,
+          "wear_start": 0.0,
+          "wear_end": 0.18013431315256442,
+          "completed": true,
+          "reward": -0.7889999999999624,
+          "reward_time": -1.0389999999999624,
+          "reward_progress": 0.25,
+          "reward_finish": 0.0,
+          "reward_failure": 0.0
+        },
+        {
+          "lap": 2,
+          "duration_s": 114.55000000001986,
+          "pit": true,
+          "wear_start": 0.0,
+          "wear_end": 0.18000210061395788,
+          "completed": true,
+          "reward": -0.8955000000001987,
+          "reward_time": -1.1455000000001987,
+          "reward_progress": 0.25,
+          "reward_finish": 0.0,
+          "reward_failure": 0.0
+        },
+        {
+          "lap": 3,
+          "duration_s": 114.55000000002329,
+          "pit": true,
+          "wear_start": 0.0,
+          "wear_end": 0.18000020521759122,
+          "completed": true,
+          "reward": -0.8955000000002329,
+          "reward_time": -1.1455000000002329,
+          "reward_progress": 0.25,
+          "reward_finish": 0.0,
+          "reward_failure": 0.0
+        },
+        {
+          "lap": 4,
+          "duration_s": 114.55000000002332,
+          "pit": true,
+          "wear_start": 0.0,
+          "wear_end": 0.17999913149921198,
+          "completed": true,
+          "reward": -0.8955000000002331,
+          "reward_time": -1.145500000000233,
+          "reward_progress": 0.25,
+          "reward_finish": 0.0,
+          "reward_failure": 0.0
+        },
+        {
+          "lap": 5,
+          "duration_s": 114.5499999999663,
+          "pit": true,
+          "wear_start": 0.0,
+          "wear_end": 0.18000044956309336,
+          "completed": true,
+          "reward": -0.8954999999996631,
+          "reward_time": -1.1454999999996631,
+          "reward_progress": 0.25,
+          "reward_finish": 0.0,
+          "reward_failure": 0.0
+        },
+        {
+          "lap": 6,
+          "duration_s": 114.54999999990673,
+          "pit": true,
+          "wear_start": 0.0,
+          "wear_end": 0.18000023490291442,
+          "completed": true,
+          "reward": -0.8954999999990674,
+          "reward_time": -1.1454999999990674,
+          "reward_progress": 0.25,
+          "reward_finish": 0.0,
+          "reward_failure": 0.0
+        },
+        {
+          "lap": 7,
+          "duration_s": 114.54999999990673,
+          "pit": true,
+          "wear_start": 0.0,
+          "wear_end": 0.18000020283946774,
+          "completed": true,
+          "reward": -0.8954999999990674,
+          "reward_time": -1.1454999999990674,
+          "reward_progress": 0.25,
+          "reward_finish": 0.0,
+          "reward_failure": 0.0
+        },
+        {
+          "lap": 8,
+          "duration_s": 114.54999999990673,
+          "pit": true,
+          "wear_start": 0.0,
+          "wear_end": 0.17999912902977067,
+          "completed": true,
+          "reward": 12.104500000000932,
+          "reward_time": -1.1454999999990674,
+          "reward_progress": -1.75,
+          "reward_finish": 15.0,
+          "reward_failure": 0.0
+        }
+      ],
+      "reward_components": {
+        "time": -1.1454999999990674,
+        "progress": -1.75,
+        "finish": 15.0,
+        "failure": 0.0
+      },
+      "reward_totals": {
+        "time": -9.057499999997493,
+        "progress": 0.0,
+        "finish": 15.0,
+        "failure": 0.0
+      },
+      "return": 5.942500000002507
+    }
+  }
+}

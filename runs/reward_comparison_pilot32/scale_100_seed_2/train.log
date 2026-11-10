@@ -1,0 +1,34 @@
+Using cpu device
+Wrapping the env in a DummyVecEnv.
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 8        |
+|    ep_rew_mean     | 5.82     |
+| time/              |          |
+|    fps             | 0        |
+|    iterations      | 1        |
+|    time_elapsed    | 66       |
+|    total_timesteps | 16       |
+---------------------------------
+------------------------------------------
+| rollout/                |              |
+|    ep_len_mean          | 8            |
+|    ep_rew_mean          | 5.87         |
+| time/                   |              |
+|    fps                  | 0            |
+|    iterations           | 2            |
+|    time_elapsed         | 129          |
+|    total_timesteps      | 32           |
+| train/                  |              |
+|    approx_kl            | 0.0009097345 |
+|    clip_fraction        | 0            |
+|    clip_range           | 0.2          |
+|    entropy_loss         | -0.693       |
+|    explained_variance   | -0.056       |
+|    learning_rate        | 0.0003       |
+|    loss                 | 27.9         |
+|    n_updates            | 10           |
+|    policy_gradient_loss | -0.0131      |
+|    value_loss           | 58.1         |
+------------------------------------------
+PPO-Strategie: 905.75 s, return 5.943, 7 stop(s), laps

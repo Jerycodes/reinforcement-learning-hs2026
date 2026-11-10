@@ -1,0 +1,24 @@
+<!doctype html><html lang="de"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Kart-RL · Boxenstrategie</title>
+<style>body{margin:0;background:#0b1220;color:#e2e8f0;font:16px system-ui}main{max-width:1000px;margin:auto;padding:40px 20px}
+h1{font-size:clamp(28px,5vw,48px);margin:12px 0}p{color:#aebdd0;line-height:1.6}.tag{color:#38bdf8;letter-spacing:.15em}
+section,details{background:#131e30;border:1px solid #26354d;border-radius:14px;padding:22px;margin:20px 0;overflow:auto}
+table{width:100%;border-collapse:collapse;white-space:nowrap}td,th{text-align:left;padding:12px;border-bottom:1px solid #26354d}
+.barrow{margin:20px 0}.barrow span{display:block;margin-bottom:8px}.bar{box-sizing:border-box;min-width:150px;padding:10px;border-radius:6px;color:#07111f;font-weight:650}
+summary{cursor:pointer;font-weight:650}a{color:#38bdf8}</style><main><div class="tag">KART-RL / STRATEGIE-LAB</div>
+<h1>Wann lohnt sich der Boxenstopp?</h1><p>8 Runden · 12 s pro Stopp ·
+Verschleiss 18% pro Runde · minimaler Grip 55%</p>
+<section><div class="tag">SCHNELLSTE ERFOLGREICHE STRATEGIE</div><h2>PPO-Strategie</h2>
+<p>Gleiche Physik und gleicher Referenzfahrer für alle Strategien. Ausfälle zählen nicht als Sieger.
+Ein deterministischer Vergleichslauf; keine statistische Aussage über trainierte Modelle.</p></section>
+<section><h2>Gesamte Rennzeit</h2><div class="barrow"><span>PPO-Strategie</span><div class="bar" style="width:100.00%;background:#38bdf8">929.3 s · Ziel</div></div><table><tr><th>Strategie</th><th>Status</th><th>Zeit</th>
+<th>Stopps</th><th>Runden</th></tr><tr><td>PPO-Strategie</td><td>Ziel</td><td>929.35 s</td><td>4</td><td>8/8</td></tr></table></section>
+<section><h2>Was belohnt die KI?</h2><p>Zeit: −1 pro 100 Sekunden ·
+Zielbonus: +15 · Ausfallstrafe: −5 zusätzlich zum restlichen Zeitbudget.
+Fortschrittsfeedback wird am Rennende ausgeglichen; die Gesamtzeit entscheidet über erfolgreiche Strategien.
+Stopps und frische Reifen erhalten keinen eigenen Bonus. Höherer Reward ist besser.</p>
+<table><tr><th>Strategie</th><th>Gesamt</th><th>Zeit</th><th>Fortschritt (netto)</th><th>Ziel</th><th>Ausfall</th></tr>
+<tr><td>PPO-Strategie</td><td>5.707</td><td>-9.293</td><td>0.000</td><td>15.000</td><td>0.000</td></tr></table></section><details><summary>PPO-Strategie: Runden und Reifen</summary><table><tr><th>Runde</th><th>Zeit inkl. Stopp</th><th>Stopp</th><th>Verschleiss</th><th>Abgeschlossen</th><th>Reward</th></tr><tr><td>1</td><td>103.90 s</td><td>–</td><td>18%</td><td>Ja</td><td>-0.789</td></tr><tr><td>2</td><td>111.05 s</td><td>–</td><td>36%</td><td>Ja</td><td>-0.861</td></tr><tr><td>3</td><td>121.55 s</td><td>–</td><td>54%</td><td>Ja</td><td>-0.966</td></tr><tr><td>4</td><td>134.55 s</td><td>–</td><td>72%</td><td>Ja</td><td>-1.096</td></tr><tr><td>5</td><td>114.65 s</td><td>Ja</td><td>18%</td><td>Ja</td><td>-0.896</td></tr><tr><td>6</td><td>114.55 s</td><td>Ja</td><td>18%</td><td>Ja</td><td>-0.895</td></tr><tr><td>7</td><td>114.55 s</td><td>Ja</td><td>18%</td><td>Ja</td><td>-0.895</td></tr><tr><td>8</td><td>114.55 s</td><td>Ja</td><td>18%</td><td>Ja</td><td>12.105</td></tr></table></details>
+<p>Eine Reifenmischung. Boxenservice als Zeitverlust an der Start-/Ziellinie; keine animierte Boxengasse.
+Die Rundenzeit enthält den Service vor der jeweiligen Runde.</p>
+<p><a href="results.json">Ergebnisse als JSON</a> · <a href="laps.csv">Runden als CSV</a></p></main></html>

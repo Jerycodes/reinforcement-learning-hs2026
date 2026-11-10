@@ -156,6 +156,8 @@ Der Boxenservice ist zunächst ein fester Zeitverlust an der Start-/Ziellinie.
 Details und separates PPO-Strategietraining: [Boxenstrategie](docs/boxenstrategie.md).
 Die Reward-Gewichte sind einstellbar; der Report erklärt Zeitkosten, Zielbonus,
 Ausfallstrafe und das Fortschrittsfeedback. Trainingsläufe speichern Episodenmetriken.
+`python scripts/compare_strategy_rewards.py` vergleicht drei Zeitstrafen mit
+gleichen Trainingsbudgets und mehreren Seeds; Details stehen in der Dokumentation.
 
 ## Projektstruktur
 

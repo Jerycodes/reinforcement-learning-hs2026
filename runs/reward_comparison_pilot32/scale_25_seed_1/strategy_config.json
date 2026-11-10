@@ -1,0 +1,17 @@
+{
+  "env": {
+    "laps": 8,
+    "pit_loss_s": 12.0,
+    "wear_per_lap": 0.18,
+    "min_grip": 0.55,
+    "max_time_s": 1200.0,
+    "reward_time_scale_s": 25.0,
+    "reward_progress": 2.0,
+    "reward_finish": 15.0,
+    "reward_failure": 5.0
+  },
+  "seed": 1,
+  "steps": 32,
+  "rollout_steps": 16,
+  "threads": 1
+}
