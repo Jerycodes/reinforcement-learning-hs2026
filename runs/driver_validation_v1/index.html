@@ -1,0 +1,29 @@
+<!doctype html><html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kart-RL · Optimierter Fahrer</title><style>body{margin:0;background:#0b1220;color:#e2e8f0;font:16px system-ui}
+main{max-width:1050px;margin:auto;padding:40px 20px}h1{font-size:clamp(28px,5vw,44px)}p,li{line-height:1.65;color:#b5c4d8}
+section{background:#131e30;border:1px solid #26354d;border-radius:14px;padding:24px;margin:24px 0;overflow:auto}
+table{width:100%;border-collapse:collapse;white-space:nowrap}th,td{padding:12px;text-align:left;border-bottom:1px solid #26354d}
+img{width:100%;border-radius:8px}a,.tag{color:#38bdf8}.gain{font-size:40px;font-weight:700;color:#34d399}
+</style><main><div class="tag">KART-RL / FAHRER-OPTIMIERUNG</div><h1>Schneller und geprüft</h1>
+<section><div class="gain">0.047 s pro Runde</div><p>Differenz der mittleren fliegenden Runden im abschliessenden
+30-Runden-Vergleich. Identische Strecke, Kartphysik, Sensoren und Kart-Kontur-Kollisionsregel. Keine Boxenstopps.</p>
+<table><tr><th>Modell</th><th>Ø fliegend (s)</th><th>Beste fliegend (s)</th><th>Neue Zufallsstarts</th></tr>
+<tr><td>Jerys Original</td><td>51.897</td><td>51.800</td><td>9/10</td></tr>
+<tr><td>Optimierte Policy</td><td>51.850</td><td>51.700</td><td>9/10</td></tr></table></section>
+<section><h2>Was wurde optimiert?</h2><p>Drei PPO-Varianten erhielten je 102'400 zusätzliche Schritte: vorsichtige Lernrate,
+längere Voraussicht und eine stärkere Zeitstrafe. Die schnellsten sicheren Zwischenstände wurden gespeichert.
+Daneben wurde die Ausgabeschicht der Policy mit einer kleinen Parametersuche feinabgestimmt; diese Kalibrierung ist kein zusätzliches PPO-Training.</p>
+<p>Der endgültige Kandidat kombiniert längere Voraussicht mit einer Lenkausgabe-Verstärkung von 0.94 und einem Gas-/Bremsbias von −0.01.
+Die Umwelt begrenzt alle Aktionen weiterhin auf die normalen Werte. Leistung, Grip, Bande und Strecke wurden nicht erleichtert.</p></section>
+<section><h2>Erkundete Kandidaten: jeweils zehn Runden</h2><p>Original in dieser kürzeren Prüfung: 51.894 s im Mittel.
+Diese Tabelle diente der Auswahl. Die abschliessende längere Prüfung oben verwendet ein anderes Rundenbudget.</p>
+<table><tr><th>Kandidat</th><th>Runden</th><th>Ø fliegend (s)</th><th>Beste fliegend (s)</th></tr><tr><td>PPO: vorsichtig</td><td>10/10</td><td>51.894</td><td>51.800</td></tr><tr><td>PPO: längere Voraussicht</td><td>10/10</td><td>51.850</td><td>51.700</td></tr><tr><td>PPO: stärkere Zeitstrafe</td><td>10/10</td><td>51.906</td><td>51.750</td></tr><tr><td>Lenkung: Grobsuche</td><td>10/10</td><td>51.844</td><td>51.750</td></tr><tr><td>Lenkung: Feinsuche</td><td>10/10</td><td>51.833</td><td>51.750</td></tr><tr><td>Gas-/Bremsverstärkung</td><td>10/10</td><td>52.050</td><td>51.850</td></tr><tr><td>PPO + Policy-Feinabstimmung</td><td>10/10</td><td>51.806</td><td>51.700</td></tr></table></section>
+<section><h2>Warum den besten Zwischenstand behalten?</h2><img src="learning_curves.png" alt="Rundenzeiten während des PPO-Trainings">
+<p>Die Kurven verwenden kurze Prüfungen mit drei Runden. Mehr Training verbessert nicht jeden späteren Stand.
+Die letzte Aktualisierung wird separat geprüft; sie muss nicht das schnellste Modell liefern.</p></section>
+<section><h2>Zusätzliche Startzustände</h2><p>Beide Modelle fahren dieselben zehn neuen Zufallsstarts (Seeds 100–109), jeweils bis zu zwei Ziellinienüberquerungen.
+Die optimierte Version wird nur übernommen, wenn sie den langen Lauf beendet, schneller ist und mindestens so viele Zufallsstarts beendet wie das Original.</p>
+<table><tr><th>Seed</th><th>Original</th><th>Kandidat</th></tr><tr><td>100</td><td>laps</td><td>laps</td></tr><tr><td>101</td><td>laps</td><td>laps</td></tr><tr><td>102</td><td>laps</td><td>laps</td></tr><tr><td>103</td><td>laps</td><td>laps</td></tr><tr><td>104</td><td>laps</td><td>laps</td></tr><tr><td>105</td><td>laps</td><td>laps</td></tr><tr><td>106</td><td>laps</td><td>laps</td></tr><tr><td>107</td><td>laps</td><td>laps</td></tr><tr><td>108</td><td>off_track</td><td>off_track</td></tr><tr><td>109</td><td>laps</td><td>laps</td></tr></table></section>
+<p>Ergebnis gilt für diese deterministische Strecke und die geprüften Starts. Kein Nachweis allgemeiner Überlegenheit auf anderen Strecken.
+Das Original bleibt unverändert; die geprüfte Kopie liegt im Unterordner <code>winner/</code>.</p>
+<p><a href="optimization_summary.json">Alle Vergleiche als JSON</a> · <a href="comparison.json">Lange Prüfung</a></p></main></html>

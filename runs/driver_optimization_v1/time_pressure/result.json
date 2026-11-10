@@ -1,0 +1,28 @@
+{
+  "profile": "time_pressure",
+  "source_model": "D:\\Reinforcementlearning\\reinforcement-learning-hs2026\\runs\\phase1_v2\\best.zip",
+  "seed": 2,
+  "additional_steps": 102400,
+  "selected_steps": 81920,
+  "selection_mean_s": 51.900000000001285,
+  "validation": {
+    "finished": true,
+    "episode_done": "laps",
+    "lap_times_s": [
+      54.049999999999066,
+      51.89999999999706,
+      51.90000000000552,
+      51.85000000001179,
+      52.400000000011886,
+      51.75000000001177,
+      51.80000000001178,
+      51.9000000000118,
+      51.80000000001178,
+      51.85000000000127
+    ],
+    "standing_s": 54.049999999999066,
+    "best_flying_s": 51.75000000001177,
+    "mean_flying_s": 51.90555555556385,
+    "distance_m": 6396.673668805311
+  }
+}

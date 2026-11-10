@@ -1,0 +1,61 @@
+{
+  "original": {
+    "finished": true,
+    "episode_done": "laps",
+    "lap_times_s": [
+      54.09999999999906,
+      51.89999999999706,
+      51.85000000000552,
+      51.9000000000118,
+      51.85000000001176,
+      51.9000000000118,
+      51.700000000011755,
+      51.85000000001179,
+      51.700000000011755,
+      52.00000000000182
+    ],
+    "standing_s": 54.09999999999906,
+    "best_flying_s": 51.700000000011755,
+    "mean_flying_s": 51.85000000000834,
+    "distance_m": 6396.892498945484
+  },
+  "selection": {
+    "finished": true,
+    "episode_done": "laps",
+    "lap_times_s": [
+      54.19999999999906,
+      51.79999999999706,
+      51.70000000000549
+    ],
+    "standing_s": 54.19999999999906,
+    "best_flying_s": 51.70000000000549,
+    "mean_flying_s": 51.75000000000128,
+    "distance_m": 1918.9408059260618,
+    "steering_gain": 0.94,
+    "throttle_bias": -0.01,
+    "throttle_gain": 1.0
+  },
+  "validation": {
+    "finished": true,
+    "episode_done": "laps",
+    "lap_times_s": [
+      54.19999999999906,
+      51.79999999999706,
+      51.70000000000549,
+      51.85000000001179,
+      51.950000000011784,
+      51.700000000011755,
+      51.80000000001178,
+      51.75000000001177,
+      51.95000000001181,
+      51.7500000000021
+    ],
+    "standing_s": 54.19999999999906,
+    "best_flying_s": 51.70000000000549,
+    "mean_flying_s": 51.80555555556393,
+    "distance_m": 6396.45814246123
+  },
+  "method": "actor head calibration; no physics or track changes; not PPO training",
+  "source_model": "runs\\driver_optimization_v1\\long_horizon\\best.zip",
+  "trials": 12
+}

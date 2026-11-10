@@ -1,0 +1,101 @@
+[
+  {
+    "steps": 0,
+    "finished": true,
+    "episode_done": "laps",
+    "lap_times_s": [
+      54.14999999999906,
+      51.89999999999706,
+      51.95000000000556
+    ],
+    "standing_s": 54.14999999999906,
+    "best_flying_s": 51.89999999999706,
+    "mean_flying_s": 51.925000000001305,
+    "distance_m": 1919.0707741211195
+  },
+  {
+    "steps": 20480,
+    "finished": true,
+    "episode_done": "laps",
+    "lap_times_s": [
+      54.09999999999906,
+      51.89999999999706,
+      51.85000000000552
+    ],
+    "standing_s": 54.09999999999906,
+    "best_flying_s": 51.85000000000552,
+    "mean_flying_s": 51.87500000000129,
+    "distance_m": 1919.1487516980724
+  },
+  {
+    "steps": 40960,
+    "finished": true,
+    "episode_done": "laps",
+    "lap_times_s": [
+      54.09999999999906,
+      51.99999999999705,
+      52.000000000005585
+    ],
+    "standing_s": 54.09999999999906,
+    "best_flying_s": 51.99999999999705,
+    "mean_flying_s": 52.00000000000132,
+    "distance_m": 1919.2761949066457
+  },
+  {
+    "steps": 61440,
+    "finished": true,
+    "episode_done": "laps",
+    "lap_times_s": [
+      54.29999999999905,
+      52.099999999997046,
+      52.05000000000568
+    ],
+    "standing_s": 54.29999999999905,
+    "best_flying_s": 52.05000000000568,
+    "mean_flying_s": 52.07500000000137,
+    "distance_m": 1919.5715116755287
+  },
+  {
+    "steps": 81920,
+    "finished": true,
+    "episode_done": "laps",
+    "lap_times_s": [
+      54.09999999999906,
+      52.099999999997046,
+      51.9500000000056
+    ],
+    "standing_s": 54.09999999999906,
+    "best_flying_s": 51.9500000000056,
+    "mean_flying_s": 52.02500000000133,
+    "distance_m": 1919.0354148882184
+  },
+  {
+    "steps": 102400,
+    "finished": true,
+    "episode_done": "laps",
+    "lap_times_s": [
+      54.09999999999906,
+      51.99999999999705,
+      52.000000000005585
+    ],
+    "standing_s": 54.09999999999906,
+    "best_flying_s": 51.99999999999705,
+    "mean_flying_s": 52.00000000000132,
+    "distance_m": 1919.0853614386879
+  },
+  {
+    "steps": 102400,
+    "after_final_update": true,
+    "finished": true,
+    "episode_done": "laps",
+    "lap_times_s": [
+      54.049999999999066,
+      52.099999999997046,
+      52.05000000000561
+    ],
+    "standing_s": 54.049999999999066,
+    "best_flying_s": 52.05000000000561,
+    "mean_flying_s": 52.075000000001324,
+    "distance_m": 1919.5780807576102
+  }
+]

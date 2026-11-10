@@ -1,0 +1,207 @@
+[
+  {
+    "finished": true,
+    "episode_done": "laps",
+    "lap_times_s": [
+      54.249999999999055,
+      51.89999999999706,
+      51.800000000005554
+    ],
+    "standing_s": 54.249999999999055,
+    "best_flying_s": 51.800000000005554,
+    "mean_flying_s": 51.8500000000013,
+    "distance_m": 1919.4261971739368,
+    "steering_gain": 0.9,
+    "throttle_bias": -0.015
+  },
+  {
+    "finished": true,
+    "episode_done": "laps",
+    "lap_times_s": [
+      54.19999999999906,
+      51.949999999997054,
+      51.850000000005565
+    ],
+    "standing_s": 54.19999999999906,
+    "best_flying_s": 51.850000000005565,
+    "mean_flying_s": 51.90000000000131,
+    "distance_m": 1919.2530542648446,
+    "steering_gain": 0.9,
+    "throttle_bias": 0.0
+  },
+  {
+    "finished": false,
+    "episode_done": "off_track",
+    "lap_times_s": [],
+    "standing_s": null,
+    "best_flying_s": null,
+    "mean_flying_s": null,
+    "distance_m": 118.90902720801145,
+    "steering_gain": 0.9,
+    "throttle_bias": 0.015
+  },
+  {
+    "finished": true,
+    "episode_done": "laps",
+    "lap_times_s": [
+      54.29999999999905,
+      51.89999999999706,
+      51.9500000000056
+    ],
+    "standing_s": 54.29999999999905,
+    "best_flying_s": 51.89999999999706,
+    "mean_flying_s": 51.92500000000133,
+    "distance_m": 1919.4689781317356,
+    "steering_gain": 0.92,
+    "throttle_bias": -0.015
+  },
+  {
+    "finished": true,
+    "episode_done": "laps",
+    "lap_times_s": [
+      54.14999999999906,
+      51.84999999999706,
+      51.900000000005534
+    ],
+    "standing_s": 54.14999999999906,
+    "best_flying_s": 51.84999999999706,
+    "mean_flying_s": 51.87500000000129,
+    "distance_m": 1919.2537256540568,
+    "steering_gain": 0.92,
+    "throttle_bias": 0.0
+  },
+  {
+    "finished": false,
+    "episode_done": "off_track",
+    "lap_times_s": [],
+    "standing_s": null,
+    "best_flying_s": null,
+    "mean_flying_s": null,
+    "distance_m": 115.99987095113299,
+    "steering_gain": 0.92,
+    "throttle_bias": 0.015
+  },
+  {
+    "finished": true,
+    "episode_done": "laps",
+    "lap_times_s": [
+      54.14999999999906,
+      51.89999999999706,
+      51.85000000000554
+    ],
+    "standing_s": 54.14999999999906,
+    "best_flying_s": 51.85000000000554,
+    "mean_flying_s": 51.87500000000129,
+    "distance_m": 1919.0925113560747,
+    "steering_gain": 0.94,
+    "throttle_bias": -0.015
+  },
+  {
+    "finished": true,
+    "episode_done": "laps",
+    "lap_times_s": [
+      54.14999999999906,
+      51.749999999997065,
+      51.850000000005494
+    ],
+    "standing_s": 54.14999999999906,
+    "best_flying_s": 51.749999999997065,
+    "mean_flying_s": 51.800000000001276,
+    "distance_m": 1919.5731137944404,
+    "steering_gain": 0.94,
+    "throttle_bias": 0.0
+  },
+  {
+    "finished": false,
+    "episode_done": "off_track",
+    "lap_times_s": [],
+    "standing_s": null,
+    "best_flying_s": null,
+    "mean_flying_s": null,
+    "distance_m": 117.44054956591222,
+    "steering_gain": 0.94,
+    "throttle_bias": 0.015
+  },
+  {
+    "finished": true,
+    "episode_done": "laps",
+    "lap_times_s": [
+      54.19999999999906,
+      51.99999999999705,
+      51.80000000000557
+    ],
+    "standing_s": 54.19999999999906,
+    "best_flying_s": 51.80000000000557,
+    "mean_flying_s": 51.90000000000131,
+    "distance_m": 1919.6238310962772,
+    "steering_gain": 0.95,
+    "throttle_bias": -0.015
+  },
+  {
+    "finished": true,
+    "episode_done": "laps",
+    "lap_times_s": [
+      54.14999999999906,
+      51.69999999999707,
+      51.90000000000549
+    ],
+    "standing_s": 54.14999999999906,
+    "best_flying_s": 51.69999999999707,
+    "mean_flying_s": 51.800000000001276,
+    "distance_m": 1919.5488438917366,
+    "steering_gain": 0.95,
+    "throttle_bias": 0.0
+  },
+  {
+    "finished": false,
+    "episode_done": "off_track",
+    "lap_times_s": [],
+    "standing_s": null,
+    "best_flying_s": null,
+    "mean_flying_s": null,
+    "distance_m": 115.83193988373307,
+    "steering_gain": 0.95,
+    "throttle_bias": 0.015
+  },
+  {
+    "finished": true,
+    "episode_done": "laps",
+    "lap_times_s": [
+      54.14999999999906,
+      51.89999999999706,
+      51.90000000000555
+    ],
+    "standing_s": 54.14999999999906,
+    "best_flying_s": 51.89999999999706,
+    "mean_flying_s": 51.9000000000013,
+    "distance_m": 1919.0524933321644,
+    "steering_gain": 0.96,
+    "throttle_bias": -0.015
+  },
+  {
+    "finished": true,
+    "episode_done": "laps",
+    "lap_times_s": [
+      54.09999999999906,
+      51.749999999997065,
+      51.85000000000548
+    ],
+    "standing_s": 54.09999999999906,
+    "best_flying_s": 51.749999999997065,
+    "mean_flying_s": 51.800000000001276,
+    "distance_m": 1918.9516520582029,
+    "steering_gain": 0.96,
+    "throttle_bias": 0.0
+  },
+  {
+    "finished": false,
+    "episode_done": "off_track",
+    "lap_times_s": [],
+    "standing_s": null,
+    "best_flying_s": null,
+    "mean_flying_s": null,
+    "distance_m": 115.93392078953181,
+    "steering_gain": 0.96,
+    "throttle_bias": 0.015
+  }
+]

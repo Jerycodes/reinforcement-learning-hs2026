@@ -160,6 +160,8 @@ Ausfallstrafe und das Fortschrittsfeedback. Trainingsläufe speichern Episodenme
 gleichen Trainingsbudgets und mehreren Seeds; Details stehen in der Dokumentation.
 Für Jerys tatsächlichen Fahr-PPO ohne Stopps: `python scripts/compare_driving_penalty.py`.
 Versuchsbedingungen: [Fahrtraining mit Zeitstrafe](docs/fahrtraining_zeitstrafe.md).
+Die weitere [Fahrer-Optimierung](docs/fahrer_optimierung.md) liefert eine separat
+validierte Policy unter `runs/driver_validation_v1/winner/` und einen Ergebnisbericht.
 
 ## Projektstruktur
 

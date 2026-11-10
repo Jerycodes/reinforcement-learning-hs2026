@@ -1,0 +1,28 @@
+{
+  "profile": "long_horizon",
+  "source_model": "D:\\Reinforcementlearning\\reinforcement-learning-hs2026\\runs\\phase1_v2\\best.zip",
+  "seed": 2,
+  "additional_steps": 102400,
+  "selected_steps": 20480,
+  "selection_mean_s": 51.87500000000129,
+  "validation": {
+    "finished": true,
+    "episode_done": "laps",
+    "lap_times_s": [
+      54.09999999999906,
+      51.89999999999706,
+      51.85000000000552,
+      51.9000000000118,
+      51.85000000001176,
+      51.9000000000118,
+      51.700000000011755,
+      51.85000000001179,
+      51.700000000011755,
+      52.00000000000182
+    ],
+    "standing_s": 54.09999999999906,
+    "best_flying_s": 51.700000000011755,
+    "mean_flying_s": 51.85000000000834,
+    "distance_m": 6396.892498945484
+  }
+}

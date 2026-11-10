@@ -1,0 +1,106 @@
+{
+  "model": "D:\\Reinforcementlearning\\reinforcement-learning-hs2026\\runs\\phase1_v2\\best.zip",
+  "long_run": {
+    "finished": true,
+    "episode_done": "laps",
+    "lap_times_s": [
+      54.14999999999906,
+      51.89999999999706,
+      51.95000000000556,
+      51.9000000000118,
+      51.950000000011784,
+      51.85000000001179,
+      51.95000000001181,
+      51.9000000000118,
+      51.85000000001179,
+      51.80000000000126,
+      51.999999999952706,
+      51.79999999995289,
+      51.999999999952706,
+      51.84999999995284,
+      51.94999999995275,
+      51.94999999995275,
+      51.79999999995289,
+      51.94999999995275,
+      51.79999999995289,
+      51.94999999995275,
+      51.8999999999528,
+      51.8999999999528,
+      51.79999999995289,
+      51.84999999995284,
+      51.84999999995284,
+      51.94999999995275,
+      51.8999999999528,
+      51.94999999995275,
+      51.94999999995275,
+      51.84999999995284
+    ],
+    "standing_s": 54.14999999999906,
+    "best_flying_s": 51.79999999995289,
+    "mean_flying_s": 51.89655172410795,
+    "distance_m": 19189.098202624336
+  },
+  "random_starts": [
+    {
+      "seed": 100,
+      "finished": true,
+      "episode_done": "laps",
+      "distance_m": 745.7865338373915
+    },
+    {
+      "seed": 101,
+      "finished": true,
+      "episode_done": "laps",
+      "distance_m": 675.8265129838404
+    },
+    {
+      "seed": 102,
+      "finished": true,
+      "episode_done": "laps",
+      "distance_m": 1177.0057007241362
+    },
+    {
+      "seed": 103,
+      "finished": true,
+      "episode_done": "laps",
+      "distance_m": 1079.7828289389765
+    },
+    {
+      "seed": 104,
+      "finished": true,
+      "episode_done": "laps",
+      "distance_m": 743.0432165349993
+    },
+    {
+      "seed": 105,
+      "finished": true,
+      "episode_done": "laps",
+      "distance_m": 871.7687213599845
+    },
+    {
+      "seed": 106,
+      "finished": true,
+      "episode_done": "laps",
+      "distance_m": 651.501734846711
+    },
+    {
+      "seed": 107,
+      "finished": true,
+      "episode_done": "laps",
+      "distance_m": 864.663705564923
+    },
+    {
+      "seed": 108,
+      "finished": false,
+      "episode_done": "off_track",
+      "distance_m": 24.010494602272615
+    },
+    {
+      "seed": 109,
+      "finished": true,
+      "episode_done": "laps",
+      "distance_m": 931.4875317807832
+    }
+  ],
+  "random_finished": 9
+}

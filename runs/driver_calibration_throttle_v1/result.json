@@ -1,0 +1,61 @@
+{
+  "original": {
+    "finished": true,
+    "episode_done": "laps",
+    "lap_times_s": [
+      54.14999999999906,
+      51.89999999999706,
+      51.95000000000556,
+      51.9000000000118,
+      51.950000000011784,
+      51.85000000001179,
+      51.95000000001181,
+      51.9000000000118,
+      51.85000000001179,
+      51.80000000000126
+    ],
+    "standing_s": 54.14999999999906,
+    "best_flying_s": 51.80000000000126,
+    "mean_flying_s": 51.89444444445274,
+    "distance_m": 6396.385397590666
+  },
+  "selection": {
+    "finished": true,
+    "episode_done": "laps",
+    "lap_times_s": [
+      54.19999999999906,
+      51.99999999999705,
+      52.100000000005636
+    ],
+    "standing_s": 54.19999999999906,
+    "best_flying_s": 51.99999999999705,
+    "mean_flying_s": 52.05000000000135,
+    "distance_m": 1919.049351602886,
+    "steering_gain": 0.96,
+    "throttle_bias": 0.0,
+    "throttle_gain": 1.1
+  },
+  "validation": {
+    "finished": true,
+    "episode_done": "laps",
+    "lap_times_s": [
+      54.19999999999906,
+      51.99999999999705,
+      52.100000000005636,
+      52.15000000001186,
+      52.10000000001182,
+      51.85000000001179,
+      51.95000000001181,
+      52.25000000001188,
+      52.15000000001186,
+      51.899999999999636
+    ],
+    "standing_s": 54.19999999999906,
+    "best_flying_s": 51.85000000001179,
+    "mean_flying_s": 52.05000000000815,
+    "distance_m": 6396.709382665782
+  },
+  "method": "actor head calibration; no physics or track changes; not PPO training",
+  "source_model": "D:\\Reinforcementlearning\\reinforcement-learning-hs2026\\runs\\phase1_v2\\best.zip",
+  "trials": 9
+}
