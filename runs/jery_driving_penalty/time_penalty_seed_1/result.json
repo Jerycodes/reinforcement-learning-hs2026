@@ -1,0 +1,21 @@
+{
+  "finished": true,
+  "episode_done": "laps",
+  "lap_times_s": [
+    54.14999999999906,
+    52.04999999999705,
+    52.050000000005625,
+    52.100000000011846,
+    52.050000000011806
+  ],
+  "standing_s": 54.14999999999906,
+  "best_flying_s": 52.04999999999705,
+  "mean_flying_s": 52.06250000000658,
+  "distance_m": 3198.346931758959,
+  "arm": "time_penalty",
+  "seed": 1,
+  "additional_steps": 40960,
+  "source_steps": 22300000,
+  "reward_time_per_step": -0.002,
+  "reward_off_track": -20.0
+}

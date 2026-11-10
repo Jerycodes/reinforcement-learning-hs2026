@@ -1,0 +1,24 @@
+<!doctype html><html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kart-RL · Jerys Fahrmodell</title><style>body{margin:0;background:#0b1220;color:#e2e8f0;font:16px system-ui}
+main{max-width:1050px;margin:auto;padding:40px 20px}h1{font-size:clamp(28px,5vw,44px)}p,li{color:#b5c4d8;line-height:1.65}
+section{background:#131e30;border:1px solid #26354d;border-radius:14px;padding:24px;margin:24px 0;overflow:auto}
+table{width:100%;border-collapse:collapse;white-space:nowrap}th,td{padding:12px;text-align:left;border-bottom:1px solid #26354d}a,.tag{color:#38bdf8}</style>
+<main><div class="tag">KART-RL / FAHRTRAINING OHNE BOXENSTOPP</div><h1>Hilft die Zeitstrafe Jerys Fahrer?</h1>
+<p>Gleicher Start-Checkpoint · 40,960 zusätzliche Fahr-Schritte je Lauf ·
+Seeds 0, 1, 2 · 5 Runden pro Evaluation.</p>
+<section><h2>Originalmodell</h2><p>Status: laps · stehende Runde:
+54.15 s · fliegende Runden im Mittel: 51.93 s ·
+beste fliegende Runde: 51.90 s.</p></section>
+<section><h2>Kontrollierter Vergleich</h2><p>Die Kontrollgruppe wird genauso lange weitertrainiert.
+Dadurch wird zusätzliches Training nicht mit dem Effekt der Strafe verwechselt. Mittelwerte unten verwenden nur vollständig beendete Evaluationen.
+Streuung = Standardabweichung zwischen Trainings-Seeds, nicht zwischen Runden.</p>
+<table><tr><th>Variante</th><th>Im Ziel</th><th>Ø fliegende Runde (s)</th><th>Streuung (s)</th></tr><tr><td>Weitertraining ohne Zeitstrafe</td><td>3/3</td><td>52.03</td><td>0.11</td></tr><tr><td>Weitertraining mit Zeitstrafe</td><td>3/3</td><td>52.05</td><td>0.04</td></tr></table></section>
+<section><h2>Was ist anders?</h2><p>Nur die Versuchsgruppe zahlt zusätzlich −1 Reward-Punkt pro 25 Sekunden Fahrzeit.
+Bei einem Kontrollschritt von 0.05 s entspricht das -0.002 Punkten je Schritt.
+Fortschrittsreward, Kartphysik und Kollisionsregel bleiben gleich. Bandenkontakt kostet -20 Punkte und beendet die Episode.</p>
+<p>Kein Reifenverschleiss, kein Reifenwechsel, kein Boxenstopp. Der PPO-Agent selbst steuert Gas, Bremse und Lenkung.
+Beide Gruppen verwenden eine konstante Lernrate von 0.0001 fürs Weitertraining. Die ursprünglichen Gewichte und die passenden Normalisierungsstatistiken werden geladen.</p></section>
+<section><h2>Einzelne Läufe</h2><table><tr><th>Variante</th><th>Seed</th><th>Status</th><th>Stehend (s)</th><th>Ø fliegend (s)</th><th>Beste fliegend (s)</th></tr><tr><td>Weitertraining ohne Zeitstrafe</td><td>0</td><td>laps</td><td>54.30</td><td>52.13</td><td>52.05</td></tr><tr><td>Weitertraining ohne Zeitstrafe</td><td>1</td><td>laps</td><td>54.30</td><td>52.06</td><td>52.05</td></tr><tr><td>Weitertraining ohne Zeitstrafe</td><td>2</td><td>laps</td><td>54.10</td><td>51.91</td><td>51.85</td></tr><tr><td>Weitertraining mit Zeitstrafe</td><td>0</td><td>laps</td><td>54.35</td><td>52.09</td><td>52.05</td></tr><tr><td>Weitertraining mit Zeitstrafe</td><td>1</td><td>laps</td><td>54.15</td><td>52.06</td><td>52.05</td></tr><tr><td>Weitertraining mit Zeitstrafe</td><td>2</td><td>laps</td><td>54.15</td><td>52.01</td><td>51.90</td></tr></table></section>
+<p>Kurzes Weitertraining ist ein Pilotversuch, keine belastbare Aussage über die beste Reward-Funktion.
+Identische deterministische Evaluation; die Seeds variieren das Lernen. Grössere negative Rewards allein garantieren keine schnellere Runde.</p>
+<p><a href="comparison.json">JSON</a> · <a href="comparison.csv">CSV</a></p></main></html>

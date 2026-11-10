@@ -158,6 +158,8 @@ Die Reward-Gewichte sind einstellbar; der Report erklärt Zeitkosten, Zielbonus,
 Ausfallstrafe und das Fortschrittsfeedback. Trainingsläufe speichern Episodenmetriken.
 `python scripts/compare_strategy_rewards.py` vergleicht drei Zeitstrafen mit
 gleichen Trainingsbudgets und mehreren Seeds; Details stehen in der Dokumentation.
+Für Jerys tatsächlichen Fahr-PPO ohne Stopps: `python scripts/compare_driving_penalty.py`.
+Versuchsbedingungen: [Fahrtraining mit Zeitstrafe](docs/fahrtraining_zeitstrafe.md).
 
 ## Projektstruktur
 
