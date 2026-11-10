@@ -7,5 +7,6 @@ from .track import Track
 __version__ = "0.1.0"
 
 register(id="KartLap-v0", entry_point="kart_rl.envs.lap_env:KartLapEnv")
+register(id="KartStrategy-v0", entry_point="kart_rl.envs.strategy_env:KartStrategyEnv")
 
 __all__ = ["Kart", "KartParams", "Track"]

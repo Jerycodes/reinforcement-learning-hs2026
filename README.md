@@ -147,6 +147,14 @@ python scripts/compare_runs.py                                   # Lernkurven al
 Alle Experimente (Sektor-Curriculum, Reward-Varianten, Lidar, Domain Randomization, SAC) sind in
 `docs/experimente.md` beschrieben, inkl. Kurzrecherche, was bei Racing-RL üblich ist.
 
+## Boxenstrategie (Prototyp auf dem Feature-Branch)
+
+Rennen mit einer Reifenmischung, streckenabhängigem Verschleiss und optionalem
+Reifenwechsel: `python scripts/evaluate_strategy.py` erzeugt einen HTML-Vergleich
+unter `runs/strategy_report/index.html` mit Rundenzeiten und Strategieergebnissen.
+Der Boxenservice ist zunächst ein fester Zeitverlust an der Start-/Ziellinie.
+Details und separates PPO-Strategietraining: [Boxenstrategie](docs/boxenstrategie.md).
+
 ## Projektstruktur
 
 ```

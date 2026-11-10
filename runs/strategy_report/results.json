@@ -1,0 +1,239 @@
+{
+  "config": {
+    "laps": 8,
+    "pit_loss_s": 12,
+    "wear_per_lap": 0.18,
+    "min_grip": 0.55,
+    "max_time_s": 1200.0
+  },
+  "results": {
+    "Ohne Stopp": {
+      "elapsed_s": 1142.049999999509,
+      "wear": 1.0,
+      "grip": 0.55,
+      "pit_stops": 0,
+      "laps_done": 8,
+      "finished": true,
+      "episode_done": "laps",
+      "history": [
+        {
+          "lap": 1,
+          "duration_s": 103.89999999999624,
+          "pit": false,
+          "wear_start": 0.0,
+          "wear_end": 0.18013431315256442,
+          "completed": true
+        },
+        {
+          "lap": 2,
+          "duration_s": 111.05000000001839,
+          "pit": false,
+          "wear_start": 0.18013431315256442,
+          "wear_end": 0.3600796448999278,
+          "completed": true
+        },
+        {
+          "lap": 3,
+          "duration_s": 121.55000000002761,
+          "pit": false,
+          "wear_start": 0.3600796448999278,
+          "wear_end": 0.5401145452229401,
+          "completed": true
+        },
+        {
+          "lap": 4,
+          "duration_s": 134.5500000000306,
+          "pit": false,
+          "wear_start": 0.5401145452229401,
+          "wear_end": 0.720049435744161,
+          "completed": true
+        },
+        {
+          "lap": 5,
+          "duration_s": 151.3999999999088,
+          "pit": false,
+          "wear_start": 0.720049435744161,
+          "wear_end": 0.9000878534176154,
+          "completed": true
+        },
+        {
+          "lap": 6,
+          "duration_s": 170.79999999984466,
+          "pit": false,
+          "wear_start": 0.9000878534176154,
+          "wear_end": 1.0,
+          "completed": true
+        },
+        {
+          "lap": 7,
+          "duration_s": 174.39999999984138,
+          "pit": false,
+          "wear_start": 1.0,
+          "wear_end": 1.0,
+          "completed": true
+        },
+        {
+          "lap": 8,
+          "duration_s": 174.39999999984138,
+          "pit": false,
+          "wear_start": 1.0,
+          "wear_end": 1.0,
+          "completed": true
+        }
+      ],
+      "return": -1142.049999999509
+    },
+    "Stopp nach Runde 4": {
+      "elapsed_s": 952.7999999996784,
+      "wear": 0.7199983289136612,
+      "grip": 0.6760007519888525,
+      "pit_stops": 1,
+      "laps_done": 8,
+      "finished": true,
+      "episode_done": "laps",
+      "history": [
+        {
+          "lap": 1,
+          "duration_s": 103.89999999999624,
+          "pit": false,
+          "wear_start": 0.0,
+          "wear_end": 0.18013431315256442,
+          "completed": true
+        },
+        {
+          "lap": 2,
+          "duration_s": 111.05000000001839,
+          "pit": false,
+          "wear_start": 0.18013431315256442,
+          "wear_end": 0.3600796448999278,
+          "completed": true
+        },
+        {
+          "lap": 3,
+          "duration_s": 121.55000000002761,
+          "pit": false,
+          "wear_start": 0.3600796448999278,
+          "wear_end": 0.5401145452229401,
+          "completed": true
+        },
+        {
+          "lap": 4,
+          "duration_s": 134.5500000000306,
+          "pit": false,
+          "wear_start": 0.5401145452229401,
+          "wear_end": 0.720049435744161,
+          "completed": true
+        },
+        {
+          "lap": 5,
+          "duration_s": 114.6499999999395,
+          "pit": true,
+          "wear_start": 0.0,
+          "wear_end": 0.18001811789602665,
+          "completed": true
+        },
+        {
+          "lap": 6,
+          "duration_s": 111.049999999899,
+          "pit": false,
+          "wear_start": 0.18001811789602665,
+          "wear_end": 0.35996433968835995,
+          "completed": true
+        },
+        {
+          "lap": 7,
+          "duration_s": 121.54999999988945,
+          "pit": false,
+          "wear_start": 0.35996433968835995,
+          "wear_end": 0.5400649544261938,
+          "completed": true
+        },
+        {
+          "lap": 8,
+          "duration_s": 134.49999999987767,
+          "pit": false,
+          "wear_start": 0.5400649544261938,
+          "wear_end": 0.7199983289136612,
+          "completed": true
+        }
+      ],
+      "return": -952.7999999996784
+    },
+    "Stopp ab 65 % Verschleiss": {
+      "elapsed_s": 952.7999999996784,
+      "wear": 0.7199983289136612,
+      "grip": 0.6760007519888525,
+      "pit_stops": 1,
+      "laps_done": 8,
+      "finished": true,
+      "episode_done": "laps",
+      "history": [
+        {
+          "lap": 1,
+          "duration_s": 103.89999999999624,
+          "pit": false,
+          "wear_start": 0.0,
+          "wear_end": 0.18013431315256442,
+          "completed": true
+        },
+        {
+          "lap": 2,
+          "duration_s": 111.05000000001839,
+          "pit": false,
+          "wear_start": 0.18013431315256442,
+          "wear_end": 0.3600796448999278,
+          "completed": true
+        },
+        {
+          "lap": 3,
+          "duration_s": 121.55000000002761,
+          "pit": false,
+          "wear_start": 0.3600796448999278,
+          "wear_end": 0.5401145452229401,
+          "completed": true
+        },
+        {
+          "lap": 4,
+          "duration_s": 134.5500000000306,
+          "pit": false,
+          "wear_start": 0.5401145452229401,
+          "wear_end": 0.720049435744161,
+          "completed": true
+        },
+        {
+          "lap": 5,
+          "duration_s": 114.6499999999395,
+          "pit": true,
+          "wear_start": 0.0,
+          "wear_end": 0.18001811789602665,
+          "completed": true
+        },
+        {
+          "lap": 6,
+          "duration_s": 111.049999999899,
+          "pit": false,
+          "wear_start": 0.18001811789602665,
+          "wear_end": 0.35996433968835995,
+          "completed": true
+        },
+        {
+          "lap": 7,
+          "duration_s": 121.54999999988945,
+          "pit": false,
+          "wear_start": 0.35996433968835995,
+          "wear_end": 0.5400649544261938,
+          "completed": true
+        },
+        {
+          "lap": 8,
+          "duration_s": 134.49999999987767,
+          "pit": false,
+          "wear_start": 0.5400649544261938,
+          "wear_end": 0.7199983289136612,
+          "completed": true
+        }
+      ],
+      "return": -952.7999999996784
+    }
+  }
+}
