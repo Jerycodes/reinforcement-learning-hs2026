@@ -16,6 +16,10 @@ def main():
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--rollout-steps", type=int, default=64)
     ap.add_argument("--laps", type=int, default=8)
+    ap.add_argument("--reward-time-scale", type=float, default=100.0)
+    ap.add_argument("--reward-progress", type=float, default=2.0)
+    ap.add_argument("--reward-finish", type=float, default=15.0)
+    ap.add_argument("--reward-failure", type=float, default=5.0)
     ap.add_argument("--out", type=Path, default=Path("runs/strategy_ppo"))
     args = ap.parse_args()
     if args.steps <= 0:
@@ -25,9 +29,19 @@ def main():
     from stable_baselines3 import PPO
     from stable_baselines3.common.monitor import Monitor
 
-    config = StrategyConfig(laps=args.laps)
-    env = Monitor(KartStrategyEnv(config))
+    config = StrategyConfig(
+        laps=args.laps,
+        reward_time_scale_s=args.reward_time_scale,
+        reward_progress=args.reward_progress,
+        reward_finish=args.reward_finish,
+        reward_failure=args.reward_failure,
+    )
     args.out.mkdir(parents=True, exist_ok=True)
+    env = Monitor(
+        KartStrategyEnv(config),
+        filename=str(args.out / "monitor.csv"),
+        info_keywords=("elapsed_s", "pit_stops", "finished"),
+    )
     (args.out / "strategy_config.json").write_text(
         json.dumps(
             {
@@ -53,6 +67,25 @@ def main():
         )
         model.learn(total_timesteps=args.steps)
         model.save(args.out / "strategy.zip")
+        from scripts.evaluate_strategy import run_strategy, write_report
+
+        results = {
+            "Ohne Stopp": run_strategy(config, lambda obs, info: 0),
+            "PPO-Strategie": run_strategy(
+                config, lambda obs, info: model.predict(obs, deterministic=True)[0]
+            ),
+        }
+        if config.laps > 1:
+            stop_lap = config.laps // 2
+            results[f"Stopp nach Runde {stop_lap}"] = run_strategy(
+                config, lambda obs, info: info["laps_done"] == stop_lap
+            )
+        write_report(args.out / "evaluation", config, results)
+        for name, result in results.items():
+            print(
+                f"{name}: {result['elapsed_s']:.2f} s, return {result['return']:.3f}, "
+                f"{result['pit_stops']} stop(s), {result['episode_done']}"
+            )
     finally:
         env.close()
 

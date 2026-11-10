@@ -38,16 +38,36 @@ def write_report(out, config, results):
     )
     with (out / "laps.csv").open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(
-            f, fieldnames=["strategy", "lap", "duration_s", "pit", "wear_start", "wear_end", "completed"]
+            f,
+            fieldnames=[
+                "strategy",
+                "lap",
+                "duration_s",
+                "pit",
+                "wear_start",
+                "wear_end",
+                "completed",
+                "reward",
+                "reward_time",
+                "reward_progress",
+                "reward_finish",
+                "reward_failure",
+            ],
         )
         writer.writeheader()
         for name, result in results.items():
             writer.writerows({"strategy": name, **lap} for lap in result["history"])
     colors = ["#38bdf8", "#a78bfa", "#34d399", "#fbbf24"]
-    rows, bars, details = [], [], []
+    rows, bars, details, rewards = [], [], [], []
     scale = max(r["elapsed_s"] for r in results.values()) or 1
     for i, (name, r) in enumerate(results.items()):
         label = html.escape(name)
+        totals = r["reward_totals"]
+        rewards.append(
+            f"<tr><td>{label}</td><td>{r['return']:.3f}</td>"
+            f"<td>{totals['time']:.3f}</td><td>{totals['progress']:.3f}</td>"
+            f"<td>{totals['finish']:.3f}</td><td>{totals['failure']:.3f}</td></tr>"
+        )
         status = "Ziel" if r["finished"] else "Ausfall: " + html.escape(r["episode_done"])
         rows.append(
             f"<tr><td>{label}</td><td>{status}</td><td>{r['elapsed_s']:.2f} s</td>"
@@ -61,13 +81,13 @@ def write_report(out, config, results):
         laps = "".join(
             f"<tr><td>{x['lap']}</td><td>{x['duration_s']:.2f} s</td>"
             f"<td>{'Ja' if x['pit'] else '–'}</td><td>{x['wear_end']:.0%}</td>"
-            f"<td>{'Ja' if x['completed'] else 'Nein'}</td></tr>"
+            f"<td>{'Ja' if x['completed'] else 'Nein'}</td><td>{x['reward']:.3f}</td></tr>"
             for x in r["history"]
         )
         details.append(
             f"<details><summary>{label}: Runden und Reifen</summary><table><tr>"
             "<th>Runde</th><th>Zeit inkl. Stopp</th><th>Stopp</th><th>Verschleiss</th>"
-            f"<th>Abgeschlossen</th></tr>{laps}</table></details>"
+            f"<th>Abgeschlossen</th><th>Reward</th></tr>{laps}</table></details>"
         )
     finishers = [(name, r) for name, r in results.items() if r["finished"]]
     winner = min(finishers, key=lambda x: x[1]["elapsed_s"])[0] if finishers else "Kein Rennen beendet"
@@ -85,7 +105,13 @@ Verschleiss {config.wear_per_lap:.0%} pro Runde · minimaler Grip {config.min_gr
 <p>Gleiche Physik und gleicher Referenzfahrer für alle Strategien. Ausfälle zählen nicht als Sieger.
 Ein deterministischer Vergleichslauf; keine statistische Aussage über trainierte Modelle.</p></section>
 <section><h2>Gesamte Rennzeit</h2>{"".join(bars)}<table><tr><th>Strategie</th><th>Status</th><th>Zeit</th>
-<th>Stopps</th><th>Runden</th></tr>{"".join(rows)}</table></section>{"".join(details)}
+<th>Stopps</th><th>Runden</th></tr>{"".join(rows)}</table></section>
+<section><h2>Was belohnt die KI?</h2><p>Zeit: −1 pro {config.reward_time_scale_s:g} Sekunden ·
+Zielbonus: +{config.reward_finish:g} · Ausfallstrafe: −{config.reward_failure:g} zusätzlich zum restlichen Zeitbudget.
+Fortschrittsfeedback wird am Rennende ausgeglichen; die Gesamtzeit entscheidet über erfolgreiche Strategien.
+Stopps und frische Reifen erhalten keinen eigenen Bonus. Höherer Reward ist besser.</p>
+<table><tr><th>Strategie</th><th>Gesamt</th><th>Zeit</th><th>Fortschritt (netto)</th><th>Ziel</th><th>Ausfall</th></tr>
+{"".join(rewards)}</table></section>{"".join(details)}
 <p>Eine Reifenmischung. Boxenservice als Zeitverlust an der Start-/Ziellinie; keine animierte Boxengasse.
 Die Rundenzeit enthält den Service vor der jeweiligen Runde.</p>
 <p><a href="results.json">Ergebnisse als JSON</a> · <a href="laps.csv">Runden als CSV</a></p></main></html>"""
@@ -98,12 +124,24 @@ def main():
     ap.add_argument("--fixed-lap", type=int, default=4, help="pit after this completed lap")
     ap.add_argument("--pit-loss", type=float, default=12)
     ap.add_argument("--wear", type=float, default=0.18)
+    ap.add_argument("--reward-time-scale", type=float, default=100.0)
+    ap.add_argument("--reward-progress", type=float, default=2.0)
+    ap.add_argument("--reward-finish", type=float, default=15.0)
+    ap.add_argument("--reward-failure", type=float, default=5.0)
     ap.add_argument("--model", help="optional PPO strategy model (not a driving model)")
     ap.add_argument("--out", type=Path, default=Path("runs/strategy_report"))
     args = ap.parse_args()
     if not 1 <= args.fixed_lap < args.laps:
         ap.error("--fixed-lap must be at least 1 and less than --laps")
-    config = StrategyConfig(laps=args.laps, pit_loss_s=args.pit_loss, wear_per_lap=args.wear)
+    config = StrategyConfig(
+        laps=args.laps,
+        pit_loss_s=args.pit_loss,
+        wear_per_lap=args.wear,
+        reward_time_scale_s=args.reward_time_scale,
+        reward_progress=args.reward_progress,
+        reward_finish=args.reward_finish,
+        reward_failure=args.reward_failure,
+    )
     strategies = {
         "Ohne Stopp": lambda obs, info: 0,
         f"Stopp nach Runde {args.fixed_lap}": lambda obs, info: info["laps_done"] == args.fixed_lap,
@@ -113,7 +151,7 @@ def main():
         metadata = Path(args.model).parent / "strategy_config.json"
         if not metadata.exists():
             ap.error("strategy_config.json must be next to the strategy model")
-        trained_config = json.loads(metadata.read_text(encoding="utf-8"))["env"]
+        trained_config = StrategyConfig(**json.loads(metadata.read_text(encoding="utf-8"))["env"]).__dict__
         if trained_config != config.__dict__:
             ap.error("evaluation settings differ from strategy_config.json; use the training settings")
         from stable_baselines3 import PPO

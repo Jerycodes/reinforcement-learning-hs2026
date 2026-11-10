@@ -154,6 +154,8 @@ Reifenwechsel: `python scripts/evaluate_strategy.py` erzeugt einen HTML-Vergleic
 unter `runs/strategy_report/index.html` mit Rundenzeiten und Strategieergebnissen.
 Der Boxenservice ist zunächst ein fester Zeitverlust an der Start-/Ziellinie.
 Details und separates PPO-Strategietraining: [Boxenstrategie](docs/boxenstrategie.md).
+Die Reward-Gewichte sind einstellbar; der Report erklärt Zeitkosten, Zielbonus,
+Ausfallstrafe und das Fortschrittsfeedback. Trainingsläufe speichern Episodenmetriken.
 
 ## Projektstruktur
 

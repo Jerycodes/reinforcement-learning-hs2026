@@ -36,8 +36,10 @@ den modellierten Zielkonflikt; er ist noch kein Ergebnis eines gelernten Agenten
   Der Service wird an der Start-/Ziellinie als Zeitverlust modelliert. Es gibt
   noch keine Fahrt durch die Boxengasse, Animation oder zusätzliche Wiederanfahrt.
 - Zeiten pro Runde enthalten einen etwaigen Service vor dieser Runde.
-- Reward: negative verstrichene Sekunden. Ein Ausfall kostet zusätzlich das
-  verbleibende Zeitbudget, damit früher Abbruch keine günstige Strategie ist.
+- Reward: skalierte Zeitkosten, Zielbonus und neutrale Fortschrittsformung
+  (Details unten). Ein Ausfall wird als echtes Episodenende behandelt, auch
+  beim Rennzeitlimit: PPO soll nach einem verlorenen Rennen keinen zukünftigen
+  Wert mehr anrechnen.
 - Beobachtung: verbleibende Runden, Verschleiss, Grip, verbrauchtes Zeitbudget,
   Stoppzahl und Verfügbarkeit eines Stopps (jeweils normalisiert).
 
@@ -55,6 +57,57 @@ um die ungekürzte gesamte Rennzeit zu optimieren. Der Strategie-Checkpoint ist
 kein Fahrmodell und wird nur mit `evaluate_strategy.py` geladen. Beim Vergleich
 müssen dieselbe Rundenzahl und dieselben Modellparameter wie im Training gelten.
 Ein vorhandener Fahr-PPO wird in dieser Version noch nicht als Fahrer verwendet.
+
+## Rewards einstellen
+
+Die Standardwerte sind ein erster, überprüfter Ausgangspunkt, keine bereits
+empirisch optimierten Hyperparameter:
+
+| Parameter | Standard | Wirkung |
+|---|---|---|
+| `reward_time_scale_s` | 100 | 100 Sekunden kosten einen Reward-Punkt |
+| `reward_progress` | 2 | Zwischenfeedback für abgeschlossene Runden |
+| `reward_finish` | 15 | Einmaliger Bonus bei erfolgreicher Zielankunft |
+| `reward_failure` | 5 | Zusätzliche Strafe bei Ausfall oder Zeitlimit |
+
+Pro Entscheidung gilt:
+
+```text
+reward = -verstrichene_sekunden / zeitskala
+         + potential_nachher - potential_vorher
+         + zielbonus (nur bei Zielankunft)
+         - ausfallkosten (nur bei Ausfall)
+
+potential = fortschrittsgewicht * abgeschlossene_runden / rennrunden
+potential_am_episodenende = 0
+ausfallkosten = restliches_zeitbudget / zeitskala + ausfallstrafe
+```
+
+Das Fortschrittsfeedback summiert sich über jedes ganze Rennen zu null,
+auch bei Ausfall. Bei Gamma 1 bleibt die Rangfolge abgeschlossener Rennen
+daher genau dieselbe wie bei der Gesamtzeit: Gesamt-Reward = Zielbonus minus
+Rennzeit / Zeitskala. Im Standardbeispiel erhält die Strategie ohne Stopp
+3.5795 Punkte, der Stopp nach Runde 4 5.4720 Punkte. Ein Ausfall innerhalb
+des Zeitbudgets erhält insgesamt -17 Punkte, unabhängig vom Abbruchzeitpunkt.
+
+Frische Reifen, Boxenstopps und blosse Anzahl gefahrener Runden erhalten
+keinen zusätzlichen Gesamtbonus. Sonst könnte eine langsame Strategie durch
+viele Reifenwechsel mehr Reward bekommen. Der Stopp kostet bereits seine
+zwölf Sekunden; eine weitere Stoppstrafe würde das Rennziel verändern.
+
+Alle vier Gewichte lassen sich beim Training und bei der Evaluation setzen:
+
+```powershell
+python train/train_strategy.py --steps 2048 --reward-time-scale 100 --reward-progress 2 --reward-finish 15 --reward-failure 5
+python scripts/evaluate_strategy.py --model runs/strategy_ppo/strategy.zip --reward-time-scale 100 --reward-progress 2 --reward-finish 15 --reward-failure 5
+```
+
+Training speichert die vollständige Konfiguration, den Episodenverlauf in
+`monitor.csv`, das Modell und einen anschliessenden Vergleich unter `evaluation/`.
+Der Vergleich enthält die gelernte Strategie, keinen Stopp und einen Stopp zur
+Rennmitte. Der Report zeigt die Reward-Anteile insgesamt und pro Runde;
+CSV und JSON enthalten die gleichen Werte. Höherer Gesamt-Reward ist besser.
+Kurze Pilotläufe prüfen die Pipeline; sie belegen noch keinen Lernvorteil.
 
 ## Nächste Erweiterungen
 

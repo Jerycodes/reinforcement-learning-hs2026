@@ -22,17 +22,55 @@ class StrategyConfig:
     wear_per_lap: float = 0.18
     min_grip: float = 0.55
     max_time_s: float = 1200.0
+    reward_time_scale_s: float = 100.0
+    reward_progress: float = 2.0
+    reward_finish: float = 15.0
+    reward_failure: float = 5.0
 
     def __post_init__(self):
         if isinstance(self.laps, bool) or not isinstance(self.laps, int) or self.laps < 1:
             raise ValueError("laps must be a positive integer")
-        for key in ("pit_loss_s", "wear_per_lap", "min_grip", "max_time_s"):
+        for key in (
+            "pit_loss_s",
+            "wear_per_lap",
+            "min_grip",
+            "max_time_s",
+            "reward_time_scale_s",
+            "reward_progress",
+            "reward_finish",
+            "reward_failure",
+        ):
             if not math.isfinite(getattr(self, key)):
                 raise ValueError(f"{key} must be finite")
         if self.pit_loss_s < 0 or self.wear_per_lap < 0:
             raise ValueError("pit loss and wear must be nonnegative")
         if not 0 < self.min_grip <= 1 or self.max_time_s <= 0:
             raise ValueError("min_grip must be in (0, 1]; max_time_s must be positive")
+        if self.reward_time_scale_s <= 0:
+            raise ValueError("reward_time_scale_s must be positive")
+        if min(self.reward_progress, self.reward_finish, self.reward_failure) < 0:
+            raise ValueError("reward weights must be nonnegative")
+
+
+def reward_components(config, duration, elapsed, laps_before, laps_after, done, finished):
+    """Potential-based shaping (gamma=1), with zero potential at every terminal state.
+
+    Progress terms telescope to zero across a whole race, even on failure.
+    Completed races are therefore ranked purely by time, not tyre condition
+    or number of stops. A failed race pays the entire time budget plus a penalty.
+    """
+    potential_before = config.reward_progress * laps_before / config.laps
+    potential_after = 0.0 if done else config.reward_progress * laps_after / config.laps
+    return {
+        "time": -duration / config.reward_time_scale_s,
+        "progress": potential_after - potential_before,
+        "finish": config.reward_finish if finished else 0.0,
+        "failure": -(
+            max(0.0, config.max_time_s - elapsed) / config.reward_time_scale_s + config.reward_failure
+        )
+        if done and not finished
+        else 0.0,
+    }
 
 
 class KartStrategyEnv(gym.Env):
@@ -40,8 +78,8 @@ class KartStrategyEnv(gym.Env):
 
     Observation: fraction of laps remaining, wear, grip, elapsed/budget,
     stop count/laps, and whether pitting is currently allowed. Reward is
-    minus elapsed seconds; failures additionally pay the unused time budget.
-    Thus a crash cannot beat a completed race by ending early.
+    scaled negative elapsed time plus a finish bonus. Progress shaping is
+    neutral over a whole episode; failures pay the remaining budget and a penalty.
     """
 
     def __init__(self, config: StrategyConfig | dict | None = None):
@@ -88,6 +126,8 @@ class KartStrategyEnv(gym.Env):
             "finished": self.driving.laps_done == self.config.laps and self.reason == "laps",
             "episode_done": self.reason,
             "history": [dict(row) for row in self.history],
+            "reward_components": dict(self.last_reward),
+            "reward_totals": dict(self.reward_totals),
         }
 
     def reset(self, *, seed=None, options=None):
@@ -97,6 +137,8 @@ class KartStrategyEnv(gym.Env):
         self.driver.reset()
         self.wear, self.elapsed, self.stops = 0.0, 0.0, 0
         self.history, self.reason, self.done = [], "", False
+        self.last_reward = dict.fromkeys(("time", "progress", "finish", "failure"), 0.0)
+        self.reward_totals = dict(self.last_reward)
         return self._observation(), self._info()
 
     def step(self, action):
@@ -106,6 +148,7 @@ class KartStrategyEnv(gym.Env):
             raise ValueError("action must be 0 (continue) or 1 (pit)")
         c, env = self.config, self.driving
         start = self.elapsed
+        laps_before = env.laps_done
         pit = bool(action == 1 and env.laps_done > 0)
         if pit:
             # Charge service to both the race clock and this lap's clock.
@@ -130,8 +173,25 @@ class KartStrategyEnv(gym.Env):
             self.wear = min(1.0, self.wear + c.wear_per_lap * distance / env.track.length)
             self.elapsed = env.t
         self.reason = info.get("episode_done", "")
+        # The deadline is part of this finite race task, not an external time
+        # limit: PPO must not bootstrap a value after this failure penalty.
+        if self.elapsed > c.max_time_s + 1e-9:
+            self.reason = "time"
+            truncated = True
         self.done = bool(terminated or truncated)
         duration = self.elapsed - start
+        self.last_reward = reward_components(
+            c,
+            duration,
+            self.elapsed,
+            laps_before,
+            env.laps_done,
+            self.done,
+            self.done and self.reason == "laps",
+        )
+        for key, value in self.last_reward.items():
+            self.reward_totals[key] += value
+        reward = sum(self.last_reward.values())
         self.history.append(
             {
                 "lap": target_lap,
@@ -140,12 +200,11 @@ class KartStrategyEnv(gym.Env):
                 "wear_start": wear_start,
                 "wear_end": self.wear,
                 "completed": env.laps_done >= target_lap,
+                "reward": reward,
+                **{f"reward_{key}": value for key, value in self.last_reward.items()},
             }
         )
-        reward = -duration
-        if self.done and self.reason != "laps":
-            reward -= max(0.0, c.max_time_s - self.elapsed)
-        return self._observation(), float(reward), bool(terminated), bool(truncated), self._info()
+        return self._observation(), float(reward), self.done, False, self._info()
 
     def close(self):
         self.driving.close()
