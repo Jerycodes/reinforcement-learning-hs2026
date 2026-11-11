@@ -103,6 +103,12 @@ anderen die Läufe nach `git pull` in ihrem Dashboard und können darauf aufbaue
 
 ## Selbst fahren: Mensch gegen KI (Spiel-Modus)
 
+**Neu auf dem Feature-Branch: Arcade-Multiplayer.** Mit
+`python -m kart_rl.game --arcade --lan --http 8021 --ws 8786 --open`
+startet ein agiler Spielmodus mit Drift, Boost und eigenen Karts für bis zu acht
+Browser-Spieler. [Steuerung und Mehrspieler-Anleitung](docs/arcade_multiplayer.md).
+Dieser Modus hat eigene Physik und eigene Ergebnisse; das RL-Training bleibt separat.
+
 ```bash
 python -m kart_rl.game --policy runs/phase1_v2/best.zip --name Jeremy --open   # oder im Dashboard «Selbst fahren»
 ```

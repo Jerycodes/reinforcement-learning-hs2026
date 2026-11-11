@@ -330,7 +330,19 @@ def main():
     ap.add_argument("--http", type=int, default=8000, help="static http port for the viewer (0 = off)")
     ap.add_argument("--countdown", type=float, default=3.0, help="seconds on the grid before the start")
     ap.add_argument("--open", action="store_true", help="open the viewer in the browser")
+    ap.add_argument("--arcade", action="store_true", help="agile multiplayer arcade mode (separate physics)")
+    ap.add_argument("--lan", action="store_true", help="with --arcade: allow players on the local network")
+    ap.add_argument("--race-laps", type=int, default=3, help="arcade race length")
     args = ap.parse_args()
+    if args.arcade:
+        if args.race_laps < 1 or not args.http:
+            ap.error("arcade requires a positive race-laps value and an HTTP port")
+        from .arcade import serve
+        try:
+            asyncio.run(serve(args))
+        except KeyboardInterrupt:
+            pass
+        return
     if args.open and args.http:
         import webbrowser
 

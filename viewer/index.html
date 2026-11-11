@@ -29,6 +29,18 @@
   #status { color:var(--muted); font-size:12px; min-height:16px; }
   .small { color:var(--muted); font-size:11px; }
   a { color:var(--ok); }
+  #arcadeBanner { position:absolute;top:24px;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none;font-size:36px;font-weight:900;text-shadow:0 3px 20px #000; }
+  #arcadeBanner small { display:block;font-size:13px;font-weight:500;color:#c6d9ec; }
+  .arcade #hud { border-color:#3fd0ff55; background:#07111de0; border-radius:14px; }
+  .arcade-speed { font-size:40px;font-weight:900;line-height:1.15;color:#3fd0ff;margin:5px 0; }
+  .arcade-speed small { font-size:13px;color:#b5c4d8; }
+  .arcade #panel { background:#0c1728ed;border-color:#3fd0ff33; }
+  #arcadeBox { padding:12px;background:#3fd0ff0a;border:1px solid #3fd0ff40;border-radius:12px;margin:10px 0; }
+  #arcadeStart { background:#3fd0ff;color:#081322;font-weight:800;padding:10px 14px; }
+  button:disabled { opacity:.4;cursor:default; }
+  .arcade-energy { height:9px;border-radius:9px;background:#243349;overflow:hidden;margin:5px 0; }
+  .arcade-energy span { display:block;height:100%;background:linear-gradient(90deg,#3fd0ff,#a17bff); }
+  @media(max-width:700px) { .arcade #panel { width:270px; } .arcade #hud { min-width:0;font-size:10px;max-width:65vw; } #arcadeBanner { top:120px;font-size:26px; } }
 </style>
 <script type="importmap">
 { "imports": { "three": "./vendor/three.module.js",
@@ -39,12 +51,13 @@
 <div id="scene"></div>
 <div id="hud">lade Strecke …</div>
 <div id="legend"></div>
+<div id="arcadeBanner" style="display:none"></div>
 <div id="panel">
-  <div class="row"><b style="font-size:14px">Kart-RL 3D-Viewer</b></div>
+  <div class="row"><b id="viewerTitle" style="font-size:14px">Kart-RL 3D-Viewer</b></div>
   <div id="status"></div>
 
-  <h3>Modus</h3>
-  <div class="row">
+  <h3 id="modeHeading">Modus</h3>
+  <div class="row" id="modeSelector">
     <button id="modeReplay" class="active">Replay</button>
     <button id="modeLive">Live</button>
     <button id="modeGame">Spiel</button>
@@ -59,15 +72,23 @@
   </div>
 
   <div id="liveBox" style="display:none">
-    <h3>Live (Python-Server)</h3>
-    <div class="row"><input type="text" id="wsUrl" value="ws://localhost:8765" style="flex:1"><button id="connect">verbinden</button></div>
+    <h3 id="connectionHeading">Live (Python-Server)</h3>
+    <div class="row" id="connectionRow"><input type="text" id="wsUrl" value="ws://localhost:8765" style="flex:1"><button id="connect">verbinden</button></div>
     <div id="trainingInfo" class="small" style="display:none; margin:6px 0">Training läuft. Das Kart fährt den <b>aktuellen Trainingsstand</b> (deterministisch, ohne Erkundungsrauschen) in Echtzeit; nach jedem Update fährt es mit der neuen Policy weiter. Policy wechseln und Parameter geht im Live-Server-Modus (<code>python -m kart_rl.live.server</code>).</div>
     <div id="gameBox" style="display:none">
-      <div class="small" style="margin:6px 0">Du fährst gegen das Modell (halbtransparenter Geist, keine Kollision). Gleiche Physik, gleiche Bande: Kontakt kostet Tempo und macht die Runde ungültig.<br>
+      <div id="classicGameHelp" class="small" style="margin:6px 0">Du fährst gegen das Modell (halbtransparenter Geist, keine Kollision). Gleiche Physik, gleiche Bande: Kontakt kostet Tempo und macht die Runde ungültig.<br>
       <b>Pfeiltasten / WASD</b> = lenken, Gas, Bremse · <b>Backspace</b> = zurück auf die Strecke · <b>R</b> = Neustart · <b>1–4</b> = Kamera</div>
       <div class="row"><label>Name</label><input type="text" id="driverName" placeholder="dein Name" style="flex:1"><button id="setName">ok</button></div>
-      <div class="row"><label>Gegner</label><select id="ghostPolicy" style="flex:1"></select></div>
-      <div class="row"><button id="gameReset">Neustart (R)</button></div>
+      <div class="row" id="ghostRow"><label>Gegner</label><select id="ghostPolicy" style="flex:1"></select></div>
+      <div class="row" id="classicResetRow"><button id="gameReset">Neustart (R)</button></div>
+      <div id="arcadeBox" style="display:none">
+        <b style="color:#3fd0ff">ARCADE · MULTIPLAYER</b>
+        <p class="small">Direkte Lenkung · Pfeiltasten / WASD fahren<br><b>Shift</b> driften · <b>Leertaste</b> Boost<br><b>R / Backspace</b> zurück auf die Strecke (+3 s)</p>
+        <div class="row"><button id="arcadeStart">Rennen starten</button><button id="arcadeInvite">Einladungslink kopieren</button></div>
+        <div id="arcadeInfo" class="small"></div>
+        <div class="arcade-energy"><span id="arcadeEnergy" style="width:100%"></span></div>
+        <div class="small">Boost lädt sich wieder auf. Einen Drift mindestens 0,7 s halten und loslassen für Mini-Boost. Karts fahren zunächst ohne gegenseitige Kollisionen.</div>
+      </div>
       <div id="gameLaps" class="small"></div>
     </div>
     <div id="serverControls">
@@ -88,14 +109,14 @@
     <button data-cam="top" class="cam">Draufsicht</button>
     <button data-cam="free" class="cam">Frei</button>
   </div>
-  <div class="small">Tasten 1–4 wechseln die Kamera, Leertaste = Play/Pause</div>
+  <div class="small" id="cameraHint">Tasten 1–4 wechseln die Kamera, Leertaste = Play/Pause</div>
 
   <h3>Anzeige</h3>
   <div class="row"><label><input type="checkbox" id="showCenter"> Mittellinie</label></div>
   <div class="row"><label><input type="checkbox" id="showRaceline" checked> berechnete Ideallinie</label></div>
   <div class="row"><label><input type="checkbox" id="showTrail" checked> Fahrspur (Farbe = Tempo)</label></div>
   <div class="row"><label><input type="checkbox" id="showLidar"> Lidar-Strahlen (nur Live)</label></div>
-  <div class="row"><label>HUD-Kart</label><select id="hudKart"></select></div>
+  <div class="row" id="hudKartRow"><label>HUD-Kart</label><select id="hudKart"></select></div>
 </div>
 <button id="toggle">☰</button>
 <div id="timeline">
@@ -112,6 +133,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 // ------------------------------------------------------------------ helpers
 const $ = id => document.getElementById(id);
+const escapeHtml = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const TRACK_URL = '../kart_rl/data/race_inn_roggwil.json';
 const RACELINE_URL = '../kart_rl/data/race_inn_roggwil_raceline.json';
 const DEFAULT_REPLAYS = ['../replays/agent.json', '../replays/baseline_raceline.json'];
@@ -296,6 +318,8 @@ function makeKart(color) {
   rw(0.6); rw(-0.6);
   const sw = add(new THREE.TorusGeometry(0.14, 0.02, 8, 24), dark, 0.12, 0.52, 0, 0, Math.PI / 2 + 0.6, 0);
   g.userData.steeringWheel = sw;
+  const flame = add(new THREE.ConeGeometry(0.18, 0.85, 10), new THREE.MeshBasicMaterial({color:0x56d9ff,transparent:true,opacity:.85}), -1.1, .25, 0, 0, 0, Math.PI / 2);
+  flame.visible = false; g.userData.boostFlame = flame;
   return g;
 }
 
@@ -305,7 +329,7 @@ let tCursor = 0, playing = true, playSpeed = 1, mode = 'replay';
 let hudIndex = 0;
 
 function addKart(name, traj, meta = {}) {
-  const color = COLORS[karts.length % COLORS.length];
+  const color = typeof meta.color === 'number' ? meta.color : COLORS[karts.length % COLORS.length];
   const group = makeKart(color);
   scene.add(group);
   const n = traj.t.length;
@@ -350,10 +374,10 @@ function removeKarts() {
 }
 
 function refreshKartList() {
-  $('replayList').innerHTML = karts.map((k, i) => `<div><span class="sw" style="background:#${k.color.toString(16).padStart(6, '0')}"></span>${k.name}` +
+  $('replayList').innerHTML = karts.map((k, i) => `<div><span class="sw" style="background:#${k.color.toString(16).padStart(6, '0')}"></span>${escapeHtml(k.name)}` +
     (k.lapTimes.length ? ` – Runden: ${k.lapTimes.map(t => t.toFixed(2) + ' s').join(', ')}` : '') + `</div>`).join('');
-  $('legend').innerHTML = karts.map(k => `<div><span class="sw" style="background:#${k.color.toString(16).padStart(6, '0')}"></span>${k.name}</div>`).join('');
-  $('hudKart').innerHTML = karts.map((k, i) => `<option value="${i}">${k.name}</option>`).join('');
+  $('legend').innerHTML = karts.map(k => `<div><span class="sw" style="background:#${k.color.toString(16).padStart(6, '0')}"></span>${escapeHtml(k.name)}</div>`).join('');
+  $('hudKart').innerHTML = karts.map((k, i) => `<option value="${i}">${escapeHtml(k.name)}</option>`).join('');
   $('hudKart').value = Math.min(hudIndex, Math.max(karts.length - 1, 0));
   updateScrub();
 }
@@ -411,6 +435,15 @@ function fmt(v, d = 1) { return (v === undefined || v === null || Number.isNaN(v
 function hud(k, st) {
   if (!k || !st) { $('hud').textContent = karts.length ? '' : 'Kein Replay geladen.\nDatei wählen oder Live verbinden.'; return; }
   const v = Math.hypot(st.vx, st.vy || 0) * 3.6;
+  if (game?.arcade) {
+    const own = game.players?.find(p => p.id === game.player_id);
+    if (!own) return;
+    $('hud').innerHTML = `<b>${escapeHtml(k.name)}</b><div class="arcade-speed">${Math.round(v)} <small>km/h</small></div>` +
+      `<div>PLATZ ${own.rank}/${game.players.length} · RUNDE ${Math.min(own.lap + 1, game.race_laps)}/${game.race_laps}</div>` +
+      `<div>Boost ${Math.round(own.energy)} %${st.boost ? ' · TURBO!' : ''} · Drift ${Math.round(own.drift_charge * 100)} %</div>` +
+      `<small>Rennzeit ${fmt(game.elapsed, 1)} s${own.penalty ? ` · Strafe +${own.penalty.toFixed(0)} s` : ''}</small>`;
+    return;
+  }
   const lap = (st.lap ?? 0) + 1;
   let lapT = st.t - (k.lapStarts && k.lapStarts[st.lap] !== undefined ? k.lapStarts[st.lap] : 0);
   const last = k.lapTimes[st.lap - 1];
@@ -461,9 +494,11 @@ function frame(dt) {
   if (mode === 'replay') {
     if (playing && karts.length) { tCursor += dt * playSpeed; if (tCursor > maxTime()) tCursor = 0; }
   }
+  if (game) { const own = liveKarts[game.player_id || 'du']; if (own) hudIndex = karts.indexOf(own); }
   let hudState = null, hudK = karts[hudIndex] || karts[0];
   for (const k of karts) {
-    const st = (mode === 'live' || mode === 'game') ? (k.traj.t.length ? at(k.traj, k.traj.t.length - 1) : null) : sample(k.traj, tCursor);
+    const st = (mode === 'live' || mode === 'game') ? (k.traj.t.length ?
+      (game?.arcade ? sample(k.traj, k.traj.t.at(-1) - .05 + Math.max(0, performance.now() - (k.receivedAt || performance.now())) / 1000) : at(k.traj, k.traj.t.length - 1)) : null) : sample(k.traj, tCursor);
     if (!st) continue;
     k.group.position.copy(W(st.x, st.y));
     k.group.rotation.y = st.yaw;
@@ -476,13 +511,15 @@ function frame(dt) {
       k.trail.geometry.setDrawRange(0, Math.max(hi, 1));
     }
     if (k.group.userData.offMarker) k.group.userData.offMarker.visible = !!st.off_track;
+    if (k.group.userData.boostFlame) k.group.userData.boostFlame.visible = !!st.boost;
+    if (game?.arcade) k.group.rotation.x = -(st.steer || 0) * Math.min(Math.abs(st.vx) / 8, 1) * .12;
     if (k === hudK) hudState = st;
   }
   if (hudK && hudState) updateCamera(hudK, hudState, dt);
   hud(hudK, hudState);
   if (mode === 'replay') { $('time').textContent = `${tCursor.toFixed(1)} s`; if (!scrubbing) $('scrub').value = Math.round(tCursor * 10); }
   if (lidarLines) lidarLines.visible = $('showLidar').checked && mode === 'live';
-  if (game) { const gk = liveKarts['du']; if (gk && gk !== karts[hudIndex]) { hudIndex = karts.indexOf(gk); $('hudKart').value = hudIndex; } }
+  if (game) $('hudKart').value = hudIndex;
   if (controls.enabled) controls.update();
   renderer.render(scene, camera);
 }
@@ -508,6 +545,7 @@ $('modeReplay').addEventListener('click', () => setMode('replay'));
 $('modeLive').addEventListener('click', () => setMode('live'));
 $('modeGame').addEventListener('click', () => setMode('game'));
 function setMode(m) {
+  if (m !== 'game') { game = null; document.body.classList.remove('arcade'); $('arcadeBanner').style.display = 'none'; }
   if (m === 'live' || m === 'game') { for (const k of [...karts]) if (!Object.values(liveKarts).includes(k)) { scene.remove(k.group); scene.remove(k.trail); karts.splice(karts.indexOf(k), 1); } refreshKartList(); }
   if (m === 'replay') { clearLive(); training = null; game = null; }
   mode = m;
@@ -575,10 +613,10 @@ function clearLive() {
   liveKart = null;
   refreshKartList();
 }
-function liveKartFor(id, name) {
-  if (liveKarts[id]) return liveKarts[id];
+function liveKartFor(id, name, color) {
+  if (liveKarts[id]) { if (liveKarts[id].name !== name) { liveKarts[id].name = name; refreshKartList(); } return liveKarts[id]; }
   const traj = { t: [], x: [], y: [], yaw: [], vx: [], vy: [], steer: [], throttle: [], s: [], lap: [] };
-  const k = addKart(name || `Kart ${id}`, traj, {});
+  const k = addKart(name || `Kart ${id}`, traj, {color});
   k.lapStarts = [0];
   const marker = new THREE.Mesh(new THREE.SphereGeometry(0.35, 12, 8), new THREE.MeshBasicMaterial({ color: 0xff2020 }));
   marker.position.y = 1.4; marker.visible = false; k.group.add(marker); k.group.userData.offMarker = marker;
@@ -587,6 +625,7 @@ function liveKartFor(id, name) {
   return k;
 }
 function pushState(k, st) {
+  k.receivedAt = performance.now();
   const tr = k.traj;
   const n = tr.t.length;
   if (n && st.t < tr.t[n - 1]) {            // new episode: start a fresh trace
@@ -594,6 +633,7 @@ function pushState(k, st) {
     k.trailN = 0; k.lapStarts = [0]; k.lapTimes = [];
   }
   for (const key of Object.keys(st)) { if (key === 'id' || key === 'hist') continue; if (!tr[key]) tr[key] = []; tr[key].push(st[key]); }
+  if (game?.arcade && tr.t.length > 4096) { for (const values of Object.values(tr)) values.splice(0, 1024); k.trailN = 0; }
   if (st.lap !== undefined && k.lapStarts[st.lap] === undefined) k.lapStarts[st.lap] = st.t;
   fillTrail(k);
 }
@@ -609,12 +649,22 @@ function handleLive(m) {
     $('serverControls').style.display = (isTraining || isGame) ? 'none' : '';
     $('trainingInfo').style.display = isTraining ? '' : 'none';
     if (isGame) {
-      game = { driver: m.driver, policy: m.policy };
+      game = { driver: m.driver, policy: m.policy, arcade: !!m.arcade, player_id: m.player_id, host_id: m.host_id, invite_url: m.invite_url };
+      document.body.classList.toggle('arcade', !!m.arcade);
+      $('viewerTitle').textContent = m.arcade ? 'ARCADE KART · MULTIPLAYER' : 'Kart-RL 3D-Viewer';
+      document.title = m.arcade ? 'Arcade Kart · Multiplayer' : 'Kart-RL 3D-Viewer';
+      for (const id of ['modeHeading', 'modeSelector', 'connectionHeading', 'connectionRow', 'hudKartRow']) $(id).style.display = m.arcade ? 'none' : '';
+      $('cameraHint').textContent = m.arcade ? '1–4 = Kamera · Shift = Drift · Leertaste = Boost' : 'Tasten 1–4 wechseln die Kamera, Leertaste = Play/Pause';
+      $('arcadeBox').style.display = m.arcade ? '' : 'none';
+      $('classicGameHelp').style.display = m.arcade ? 'none' : '';
+      $('ghostRow').style.display = m.arcade ? 'none' : '';
+      $('classicResetRow').style.display = m.arcade ? 'none' : '';
       $('ghostPolicy').innerHTML = m.policies.map(p => `<option value="${p}" ${p === m.policy ? 'selected' : ''}>${p}</option>`).join('');
       let stored = ''; try { stored = localStorage.getItem('driverName') || ''; } catch (e) {}
       if (!$('driverName').value) $('driverName').value = m.driver !== 'du' ? m.driver : stored;
       if (m.driver === 'du' && stored) { send({ type: 'set_name', name: stored }); game.driver = stored; }
-      status(`Spiel gegen ${m.policy.split('/').slice(-2, -1)[0] || m.policy} – Pfeiltasten/WASD fahren, R = Neustart`); setCamera('chase');
+      if (m.arcade && stored) { $('driverName').value = stored; send({type:'set_name',name:stored}); }
+      status(m.arcade ? 'Arcade-Lobby verbunden – jedes Browserfenster steuert ein eigenes Kart' : `Spiel gegen ${m.policy.split('/').slice(-2, -1)[0] || m.policy} – Pfeiltasten/WASD fahren, R = Neustart`); setCamera('chase');
     }
     else if (isTraining) { newLiveKart('aktueller Trainingsstand'); status(`Training: ${m.policy}`); setCamera('chase'); }
     else { newLiveKart(m.policy || 'live'); status(`Server: ${m.track}, Policy ${m.policy}`); }
@@ -626,8 +676,14 @@ function handleLive(m) {
     if (m.lidar) drawLidar(m.state, m.lidar);
   } else if (m.type === 'states') {
     if (m.game) { game = { ...game, ...m.game }; renderGameLaps(); }
+    if (m.game?.arcade) {
+      const ids = new Set(m.states.map(st => st.id));
+      for (const [id, kart] of Object.entries(liveKarts)) if (!ids.has(id)) {
+        scene.remove(kart.group); scene.remove(kart.trail); karts.splice(karts.indexOf(kart), 1); delete liveKarts[id]; refreshKartList();
+      }
+    }
     for (const st of m.states) {
-      const k = liveKartFor(st.id, m.game ? (st.id === 'du' ? (m.game.driver === 'du' ? 'du' : m.game.driver) : `KI: ${m.game.policy.split('/').slice(-2).join('/')}`) : `Training-Env ${st.id}`);
+      const k = liveKartFor(st.id, m.game?.arcade ? st.name : m.game ? (st.id === 'du' ? (m.game.driver === 'du' ? 'du' : m.game.driver) : `KI: ${m.game.policy.split('/').slice(-2).join('/')}`) : `Training-Env ${st.id}`, st.color);
       if (st.ghost && !k.isGhost) makeGhost(k);
       if (st.hist && st.hist.length) {   // intermediate positions since the last message -> smooth trail
         for (const [t, x, y, v] of st.hist) {
@@ -641,6 +697,8 @@ function handleLive(m) {
   } else if (m.type === 'lap') {
     const who = m.who === 'du' ? 'Du' : 'KI';
     status(`${who}: Runde ${m.lap_time.toFixed(2)} s${m.valid ? '' : ' (Bandenkontakt, ungültig)'}` + (m.best_du && m.best_ki ? ` – beste: du ${m.best_du.toFixed(2)} / KI ${m.best_ki.toFixed(2)}` : ''));
+  } else if (m.type === 'error') {
+    status(m.message || 'Serverfehler');
   } else if (m.type === 'episode_end') {
     status(`Episode: ${m.reason}, Runden ${(m.lap_times || []).map(t => t.toFixed(2)).join(', ')}`);
     refreshKartList();
@@ -656,7 +714,7 @@ function handleLive(m) {
 
 // ------------------------------------------------------------------ game mode
 let game = null;
-const heldKeys = { left: false, right: false, up: false, down: false };
+const heldKeys = { left: false, right: false, up: false, down: false, drift: false, boost: false };
 const KEYMAP = { ArrowLeft: 'left', a: 'left', A: 'left', ArrowRight: 'right', d: 'right', D: 'right', ArrowUp: 'up', w: 'up', W: 'up', ArrowDown: 'down', s: 'down', S: 'down' };
 function sendKeys() { send({ type: 'keys', ...heldKeys }); }
 window.addEventListener('keydown', e => {
@@ -667,13 +725,16 @@ window.addEventListener('keydown', e => {
   }
   const k = KEYMAP[e.key];
   if (k) { e.preventDefault(); if (!heldKeys[k]) { heldKeys[k] = true; sendKeys(); } }
-  if (e.key === 'r' || e.key === 'R') send({ type: 'control', action: 'reset' });
+  if (game?.arcade && (e.key === 'Shift' || e.key === ' ')) { e.preventDefault(); heldKeys[e.key === 'Shift' ? 'drift' : 'boost'] = true; sendKeys(); }
+  if ((e.key === 'r' || e.key === 'R') && !e.repeat) send({ type: 'control', action: game?.arcade ? 'respawn' : 'reset' });
   if (e.key === 'Backspace') { e.preventDefault(); send({ type: 'control', action: 'respawn' }); }
 });
 window.addEventListener('keyup', e => {
   const k = KEYMAP[e.key];
   if (k && heldKeys[k]) { heldKeys[k] = false; if (mode === 'game') sendKeys(); }
+  if (game?.arcade && (e.key === 'Shift' || e.key === ' ')) { heldKeys[e.key === 'Shift' ? 'drift' : 'boost'] = false; sendKeys(); }
 });
+setInterval(() => { if (game?.arcade && Object.values(heldKeys).some(Boolean)) sendKeys(); }, 100);
 window.addEventListener('blur', () => { for (const k in heldKeys) heldKeys[k] = false; if (mode === 'game') sendKeys(); });
 function makeGhost(k) {
   k.isGhost = true;
@@ -682,10 +743,29 @@ function makeGhost(k) {
 }
 function renderGameLaps() {
   if (!game) return;
+  if (game.arcade) { renderArcade(); return; }
   const row = (who, h) => h ? `<tr><td><b>${who}</b></td><td>${h.lap}</td><td>${fmt(h.current, 2)}</td><td>${h.last != null ? fmt(h.last, 2) + (h.last_valid === false ? '*' : '') : '–'}</td><td>${h.best != null ? fmt(h.best, 2) : '–'}</td></tr>` : '';
   const delta = game.delta !== undefined ? `<div style="margin-top:4px">Δ beste Runde: <b>${game.delta > 0 ? '+' : ''}${game.delta.toFixed(2)} s</b> ${game.delta > 0 ? '(KI schneller)' : game.delta < 0 ? '(du bist schneller!)' : ''}</div>` : '';
   $('gameLaps').innerHTML = `<table style="width:100%;border-collapse:collapse;margin-top:6px"><tr><th></th><th>Runde</th><th>aktuell</th><th>letzte</th><th>beste</th></tr>${row(game.driver && game.driver !== 'du' ? game.driver : 'Du', game.du)}${row('KI', game.ki)}</table>${delta}<div class="small" style="opacity:.7">* = Bandenkontakt, zählt nicht. Alle Runden landen in runs/human/laps.csv, Replays in replays/human/.</div>`;
 }
+function renderArcade() {
+  const players = game.players || [], own = players.find(p => p.id === game.player_id);
+  const host = game.host_id === game.player_id;
+  $('arcadeStart').disabled = !host;
+  $('arcadeStart').textContent = game.phase === 'lobby' ? 'Rennen starten' : 'Neues Rennen';
+  $('arcadeInfo').textContent = `${players.length}/8 Spieler · ${game.race_laps} Runden · ${host ? 'Du bist Host' : 'Host startet das Rennen'}${own?.waiting ? ' · Einstieg beim nächsten Rennen' : ''}`;
+  $('arcadeEnergy').style.width = `${own?.energy ?? 100}%`;
+  $('arcadeBanner').style.display = '';
+  const title = game.phase === 'lobby' ? 'BEREIT?' : game.phase === 'countdown' ? `${Math.ceil(game.countdown)}` : own?.finish_time != null ? 'ZIEL!' : game.phase === 'finished' ? 'RENNEN BEENDET' : game.elapsed < 1 ? 'LOS!' : '';
+  $('arcadeBanner').innerHTML = `${title}<small>${game.phase === 'lobby' ? 'Name eingeben · Freunde einladen · Rennen starten' : own?.finish_time != null ? `Deine Zeit ${own.finish_time.toFixed(2)} s` : ''}</small>`;
+  $('gameLaps').innerHTML = `<h3>Live-Rangliste</h3><table style="width:100%;border-collapse:collapse"><tr><th>#</th><th>Fahrer</th><th>Runde / Zeit</th></tr>${players.map(p => `<tr style="color:${p.id === game.player_id ? '#3fd0ff' : 'inherit'}"><td>${p.rank}</td><td>${escapeHtml(p.name)}${p.id === game.player_id ? ' (du)' : ''}</td><td>${p.waiting ? 'wartet' : p.finish_time != null ? p.finish_time.toFixed(2) + ' s' : Math.min(p.lap + 1, game.race_laps) + '/' + game.race_laps}${p.penalty ? ' +' + p.penalty.toFixed(0) + 's' : ''}</td></tr>`).join('')}</table><p class="small">Arcade-Zeiten sind getrennt von den RL-Benchmarks. Ein neuer Tab bedeutet ein neues Kart.</p>`;
+}
+$('arcadeStart').addEventListener('click', () => send({type:'control',action:'start_race'}));
+$('arcadeInvite').addEventListener('click', async () => {
+  const invite = game?.invite_url || location.href;
+  try { await navigator.clipboard.writeText(invite); status('Einladungslink kopiert – Freunde im selben WLAN können beitreten.'); }
+  catch { status(`Einladungslink: ${invite}`); }
+});
 $('setName').addEventListener('click', () => { const n = $('driverName').value.trim(); if (n) { send({ type: 'set_name', name: n }); if (game) { game.driver = n; } try { localStorage.setItem('driverName', n); } catch (e) {} } $('driverName').blur(); $('setName').blur(); status('Name gesetzt – Pfeiltasten/WASD fahren (Klick in die 3D-Ansicht, falls nichts passiert)'); });
 $('driverName').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('setName').click(); } });
 renderer.domElement.addEventListener('mousedown', () => { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); });
@@ -733,6 +813,7 @@ window.kartViewer = {
   loadReplay(url) { return loadReplayUrl(url); },
   connect(url) { $('wsUrl').value = url; if (!ws) $('connect').click(); },
   karts() { return karts.map(k => ({ name: k.name, steps: k.traj.t.length, lapTimes: k.lapTimes })); },
+  gameState() { return game ? structuredClone(game) : null; },
   maxTime,
 };
 
@@ -753,8 +834,8 @@ window.kartViewer = {
   }
   const params = new URLSearchParams(location.search);
   const urls = params.getAll('replay');
-  for (const u of (urls.length ? urls : DEFAULT_REPLAYS)) await loadReplayUrl(u, true);
-  if (params.get('ws')) $('wsUrl').value = `ws://localhost:${params.get('ws')}`;
+  for (const u of (urls.length ? urls : params.has('game') || params.has('live') ? [] : DEFAULT_REPLAYS)) await loadReplayUrl(u, true);
+  if (params.get('ws')) $('wsUrl').value = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.hostname}:${params.get('ws')}`;
   if (params.get('live') !== null) { setMode('live'); retryUntil = Date.now() + 90000; connectLive(); }
   if (params.get('game') !== null) { setMode('game'); retryUntil = Date.now() + 90000; connectLive(); }
   if (params.get('cam')) setCamera(params.get('cam'));
