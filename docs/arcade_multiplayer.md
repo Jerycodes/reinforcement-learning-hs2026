@@ -1,82 +1,71 @@
-# Arcade Kart: agiler fahren und gemeinsam spielen
+# Privates Arcade-Rennen
 
-Der zusätzliche Arcade-Modus verwendet direkte Lenkung, kräftigere Beschleunigung
-und ein einfacheres Fahrmodell. Er ist getrennt von der RL-Simulation und ihren
-Bestzeiten. Jerys Modell und die bestehenden Trainingsumgebungen bleiben unverändert.
+## Lokal spielen
 
-## Spielen
+Im Repository auf `feature/pitstop-strategy-analysis` unter Windows genügt mit der vorhandenen Umgebung:
 
 ```powershell
-python -m kart_rl.game --arcade --lan --http 8021 --ws 8786 --open
+.\.venv\Scripts\python.exe -m kart_rl.game --arcade --http 8031 --ws 8796 --open
 ```
 
-Auf dem Host öffnet sich:
+Auf einem frischen Checkout zuerst `py -3 -m venv .venv` und `.\.venv\Scripts\python.exe -m pip install -e .` ausführen. Für PPO oder Tests zusätzlich `.\.venv\Scripts\python.exe -m pip install -e ".[train,dev]"`.
 
-```text
-http://localhost:8021/viewer/?game&arcade&ws=8786
-```
+1. [Rennraum erstellen](http://localhost:8031/viewer/?game&arcade&ws=8796). Beim Öffnen erstellt der Server einen privaten Raum und ergänzt die Browseradresse um einen zufälligen Raumschlüssel.
+2. **Einladungslink kopieren** und die Adresse in einem zweiten Fenster öffnen. Beide sehen dasselbe Startfeld. Pro Browserfenster gibt es ein Kart. Die Adresse ohne Raumschlüssel erstellt einen weiteren unabhängigen Raum.
+3. Beide wählen Namen, Kart und Reifen und klicken **Bereit**. Doppelte Namen werden auch bei anderer Gross-/Kleinschreibung abgewiesen. Jede Änderung der Auswahl hebt die Bereitmeldung auf. Der Host kann freie Plätze mit **+ Bot** füllen und mit **− Bot** wieder freigeben. Insgesamt gibt es fünf Plätze.
+4. Der Host klickt **Rennen starten**. Nach drei Sekunden geht es über drei Runden. Das aktive Fenster bekommt die Tastatureingaben. Für zwei gleichzeitig steuernde Menschen zwei Computer verwenden.
+5. Mit **WASD** oder **Pfeiltasten** fahren und bremsen, beim Lenken **Shift** halten zum Driften. Nach mindestens 0,7 Sekunden Drift gibt Loslassen einen Mini-Boost. **Leertaste** nutzt den aufladbaren Boost. **R** oder **Backspace** setzt das Kart auf die Mittellinie und kostet drei Sekunden. **1–4** wechseln die Kamera.
 
-Jeder Browser beziehungsweise jeder PC bekommt ein eigenes Kart. Bis zu acht
-Spieler können derselben Lobby beitreten. Der erste verbundene Spieler ist Host
-und startet das gemeinsame Rennen. Verlässt er die Lobby, übernimmt der nächste
-Spieler. Wer während des Rennens beitritt, wartet bis zum nächsten Start.
-Alle können auch allein ein Zeitrennen starten.
+### Karts und Reifen
 
-Mit **Einladungslink kopieren** erhält der Host einen Link mit seiner lokalen
-Netzwerkadresse. Mitspieler im selben Netzwerk öffnen diesen in ihrem Browser;
-sie müssen Python oder das Repository nicht installieren. `--lan` bindet den
-Server ans lokale Netzwerk. Ohne dieses Flag ist er nur auf dem Host erreichbar.
-Das ist kein öffentlich gehosteter Internet-Multiplayer. Zwei getrennte
-Browser-Clients wurden automatisch getestet; ein zweiter physischer PC wurde
-in dieser Sitzung nicht getestet.
+| Kart | Antritt | Spitze ohne Boost | Lenkung |
+|---|---:|---:|---|
+| Club | 12 m/s² | 79 km/h | ausgewogen |
+| Sprint | 14 m/s² | 72 km/h | agil |
+| GT | 10 m/s² | 86 km/h | ruhiger |
 
-## Steuerung
+Standardreifen sind die Referenz. Grip-Reifen erhöhen die Kurvenreaktion um 16 % und reduzieren den Antritt um 8 %. Speed-Reifen erhöhen den Antritt um 8 % und reduzieren die Kurvenreaktion um 11 %. Die Auswahl beeinflusst auch den seitlichen Schlupf beim Driften.
 
-| Taste | Aktion |
-|---|---|
-| Pfeiltasten oder WASD | Lenken, Gas und Bremsen |
-| Shift beim Lenken | Driften |
-| Shift nach mindestens 0.7 s Drift loslassen | Mini-Boost |
-| Leertaste | Boost aus dem wiederaufladbaren Vorrat |
-| R oder Backspace | Auf die Strecke zurücksetzen, +3 s Rennzeit |
-| 1–4 | Kamera wechseln |
+### Rennwertung und Verbindungsabbruch
 
-Ein Klick in die 3D-Ansicht löst den Fokus vom Namensfeld. Jeder Browser folgt
-mit seiner Kamera dem eigenen Kart. Boost-Flamme, Vorrat und Drift-Fortschritt
-werden live angezeigt. Beim Fokusverlust werden die Tasten freigegeben;
-ausbleibende Eingaben werden zusätzlich auf dem Server nach einer Sekunde gelöst.
+Der Server simuliert feste Schritte von 1/30 Sekunde. Der Browser übermittelt Tasten und Lobbywünsche. Das Rennen wertet Nettodistanz, abgeschlossene Runden und Zielzeit inklusive Strafen. Bandenkontakt kostet Geschwindigkeit. Bei Kartkontakt verliert das schnellere Kart einmal je neuem Kontakt Tempo. Nach zehn simulierten Minuten werden offene Ergebnisse als DNF gewertet. Die Endrangliste und `runs/arcade/races.csv` berücksichtigen auch ausgestiegene Teilnehmer, solange der Raum weiterbesteht.
 
-## Rennregeln
+Beim Schliessen eines Fensters wird der Platz nach Erkennung des Abbruchs frei. Der nächste menschliche Spieler übernimmt die Hostrolle. Während des Rennens warten neu verbundene Spieler bis zum nächsten Start. Ein Neuladen erzeugt einen neuen Teilnehmer. Sobald der letzte Mensch geht, verfällt der Raumlink. Laufende Räume liegen im Arbeitsspeicher.
 
-- Standard: drei Runden, gemeinsamer Countdown und Live-Rangliste.
-- Der Server simuliert alle Karts mit 30 Steuerungsschritten pro Sekunde;
-  Browser senden nur Tasten, keine vertrauenswürdigen Positionen oder Runden.
-- Runden zählen nach tatsächlich zurückgelegter Nettodistanz. Wiederholtes
-  Vor-/Zurückfahren über die Startlinie bringt keine zusätzlichen Runden.
-- Banden verlangsamen das Kart. Zurücksetzen gibt keinen Distanzvorteil und
-  kostet drei Sekunden. Der Rennabschluss enthält diese Strafe.
-- Nach zehn Minuten endet ein noch nicht abgeschlossenes Rennen. Der Host
-  kann jederzeit ein neues Rennen starten.
-- Ergebnisse werden separat in `runs/arcade/races.csv` mit dem Profil `arcade`
-  gespeichert. Sie sind nicht mit RL-Rundenzeiten vergleichbar.
+## Gemeinsame Simulation und Training
 
-Die erste Version fährt ohne gegenseitige Kart-Kollisionen, Waffen oder Items.
-Es gibt weder Split-Screen noch Gamepad-Steuerung; mehrere Spieler verwenden
-jeweils einen Browser mit Tastatur. Der bisherige Modus Mensch gegen trainierte
-KI bleibt ohne `--arcade` verfügbar und nutzt weiterhin die bisherige Physik.
+Die Roggwiler Strecke, ihre Mittellinie, LiDAR, die Kartkontur und Bandenkollisionen kommen aus KartLapEnv. Der Three.js-Viewer zeigt autoritative Zustände und verfolgt das eigene Kart. Die klassischen Fahrversuche verwenden weiter ihr eigenes Fahrmodell.
 
-## Umsetzung und Prüfung
+- `kart_rl/game/driver.py` enthält die gemeinsame Tastatur- und Fahrzeuganbindung.
+- `kart_rl/game/race.py` enthält die browserlose Arcade-Simulation, Auswahl, Rennregeln und den regelbasierten Mittellinienfahrer.
+- `kart_rl/game/arcade.py` verwaltet Verbindungen, Raumlinks und Verteilung der Zustände.
+- `kart_rl/envs/arcade_env.py` nutzt denselben Fahrerschritt in einer Solo-Gymnasium-Umgebung. Die 38 Beobachtungswerte bestehen aus 30 Strecken-/Fahrzustandswerten sowie Boostvorrat, Driftladung, Mini-Boost-Restzeit und fünf Setupwerten. Die vier Aktionen in [-1,1] sind Lenkung, Gas/Bremse, Drift und Boost. Positive Werte aktivieren die letzten beiden. Reward pro Schritt ist der vorzeichenbehaftete Fortschritt in Metern minus 0,2 × Schrittzeit und minus 1 bei Bandenkontakt. Das Ziel gibt zusätzlich 10 Punkte. Zielankunft beendet die Episode, Zeitablauf kürzt sie ab. Beim Reset werden Kart und Reifen variiert.
 
-`kart_rl/game/arcade.py` enthält das Arcade-Fahrmodell, pro Verbindung ein eigenes
-Kart und Eingabegerät, Lobby, Countdown, Boost, Drift und Rennwertung.
-Die Freigabe im Netzwerk liefert nur Viewer- und Streckenassets aus, keine
-Repository-Konfigurationen oder Modellarchive.
+Jerys Fahr-PPO und der optimierte Lap-Checkpoint verwenden 30 Beobachtungswerte und zwei Aktionen. Der Arcade-Server verwendet standardmässig den regelbasierten Fahrer. Ein explizit gewähltes Modell wird erst nach Prüfung der gespeicherten Raumdimensionen und der Arcade-Kennung geladen. Nur eigene, vertrauenswürdige lokale Modellarchive angeben.
 
 ```powershell
-pytest -q
+.\.venv\Scripts\python.exe -m train.train_arcade --steps 250000 --output runs/arcade_ppo/policy.zip
+.\.venv\Scripts\python.exe -m kart_rl.game --arcade --arcade-policy runs/arcade_ppo/policy.zip --http 8031 --ws 8796 --open
 ```
 
-Die neuen Tests prüfen Fahrverhalten, getrennte Eingaben, Hostwechsel,
-späten Einstieg, Drift/Boost, JSON-Übertragung, Rücksetzstrafe, Renndistanz und
-WebSocket-Verbindungen. Zusätzlich wurden zwei echte Chrome-Kontexte mit
-eigenen Karts, eigener Kamera, Boost und Hostberechtigungen geprüft.
+Den vorherigen Server vor einem Neustart auf denselben Ports beenden. Das Training übt Solorunden. Vor einem Einsatz als Renngegner Zielquote und Rundenzeiten über alle Kombinationen prüfen. Mit `.\.venv\Scripts\python.exe -m pytest -q` laufen auch die Raum-, Rennregel- und Gymnasium-Tests.
+
+## Mit anderen Geräten und über das Internet
+
+**Im WLAN** den Server mit zusätzlichem `--lan` starten und bei Bedarf beide TCP-Ports in der Firewall für das private Netzwerk erlauben. Auf dem Host die Startadresse mit seiner LAN-IP statt localhost öffnen, beispielsweise `http://192.168.1.20:8031/viewer/?game&arcade&ws=8796`. Der kopierte Raumlink verwendet denselben Hostnamen. Mitspielende benötigen einen Browser mit WebGL und eine Tastatur.
+
+**Öffentlicher Link** auf einem eigenen oder bereits freigegebenen Linux-Server:
+
+1. Den geprüften Feature-Branch auf den Server übertragen. Python ab 3.10 installieren, im Projekt `python3 -m venv .venv` und `.venv/bin/python -m pip install -e .` ausführen. Das Dienstkonto braucht Schreibrechte für `runs/arcade`.
+2. Aus dem Projektverzeichnis `.venv/bin/python -m kart_rl.game --arcade --http 8031 --ws 8796` starten. Für dauerhaften Betrieb diesen Befehl als Dienst mit Projektverzeichnis als WorkingDirectory und automatischem Neustart betreiben. Ein einzelner Prozess hält die Räume. Neustarts schliessen laufende Räume.
+3. Eine eigene Subdomain per DNS auf diesen Host zeigen lassen. TCP 80 und 443 zum Reverse Proxy freigeben. Die beiden Python-Ports bleiben auf Loopback. Caddy installieren, im folgenden Caddyfile die Beispieldomain ersetzen und `caddy run --config Caddyfile` starten (bei bestehendem Caddy-Dienst die Konfiguration dort integrieren und neu laden).
+
+```caddyfile
+kart.example.org {
+    reverse_proxy /socket 127.0.0.1:8796
+    reverse_proxy 127.0.0.1:8031
+}
+```
+
+4. Im Browser `https://kart.example.org/viewer/?game&arcade` öffnen. Ohne ws-Port im Link verwendet der Viewer dieselbe Domain mit WSS auf /socket. Caddy übernimmt TLS und den WebSocket-Upgrade. [Caddy-Dokumentation](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy)
+5. Den erzeugten Link inklusive Raumparameter an vier weitere Personen senden. Wer den vollständigen Link kennt, kann einen freien Platz belegen. Von einem zweiten Netz Beitritt, Countdown, Steuerung, Hostwechsel und Zielwertung testen. Die Spielversion ist lokal geprüft. Ein öffentlicher Fünf-Personen-Test und die Messung der Netzwerklatenz stehen aus.

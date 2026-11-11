@@ -5,7 +5,8 @@ import time
 import numpy as np
 import pytest
 
-from kart_rl.game.arcade import ArcadeKart, ArcadeServer
+from kart_rl.game.arcade import RoomService
+from kart_rl.game.race import ArcadeKart, RaceRoom
 from kart_rl.kart import Kart
 
 
@@ -26,9 +27,11 @@ def test_arcade_accelerates_and_turns_more_quickly_without_changing_training_kar
 
 
 def test_each_player_has_own_controls_and_host_only_start(tmp_path):
-    server = ArcadeServer(results_path=tmp_path / "races.csv")
+    server = RaceRoom(results_path=tmp_path / "races.csv")
     one, two = server.join(), server.join()
     assert not server.start(two.id)
+    assert not server.start(one.id)
+    one.ready = two.ready = True
     assert server.start(one.id)
     server.countdown = 0
     server.tick()
@@ -44,7 +47,7 @@ def test_each_player_has_own_controls_and_host_only_start(tmp_path):
 
 
 def test_boost_drift_and_stale_input_safety(tmp_path, monkeypatch):
-    server = ArcadeServer(results_path=tmp_path / "races.csv")
+    server = RaceRoom(results_path=tmp_path / "races.csv")
     player = server.join()
     player.racer.env.kart.reset(*player.racer.env.track.start_pose(0), speed=8)
     # Keep this mechanics test away from track barriers; physical movement and
@@ -70,8 +73,9 @@ def test_boost_drift_and_stale_input_safety(tmp_path, monkeypatch):
 
 
 def test_race_distance_and_respawn_penalty_cannot_be_spoofed(tmp_path):
-    server = ArcadeServer(laps=1, results_path=tmp_path / "races.csv")
+    server = RaceRoom(laps=1, results_path=tmp_path / "races.csv")
     player = server.join()
+    player.ready = True
     server.start(player.id)
     server.phase = "racing"
     # Spoofing a lap counter or position over the wire has no effect.
@@ -92,8 +96,9 @@ def test_race_distance_and_respawn_penalty_cannot_be_spoofed(tmp_path):
 
 
 def test_late_join_capacity_and_name_sanitization(tmp_path):
-    server = ArcadeServer(max_players=2, results_path=tmp_path / "races.csv")
+    server = RaceRoom(max_players=2, results_path=tmp_path / "races.csv")
     one = server.join()
+    one.ready = True
     server.start(one.id)
     two = server.join()
     assert two.waiting
@@ -110,20 +115,93 @@ def test_two_websocket_players_are_isolated_and_disconnect_cleans_up(tmp_path):
     import websockets
 
     async def scenario():
-        server = ArcadeServer(results_path=tmp_path / "races.csv")
+        server = RoomService()
         async with websockets.serve(server.handler, "127.0.0.1", 0) as listener:
             port = listener.sockets[0].getsockname()[1]
             async with websockets.connect(f"ws://127.0.0.1:{port}") as one:
+                await one.send(json.dumps({"type": "create"}))
                 first = json.loads(await one.recv())
                 async with websockets.connect(f"ws://127.0.0.1:{port}") as two:
+                    await two.send(json.dumps({"type": "join", "room": first["room"]}))
+                    room = server.rooms[first["room"]]
                     second = json.loads(await two.recv())
                     assert first["player_id"] != second["player_id"]
                     await one.send(json.dumps({"type": "keys", "up": True}))
                     await two.send(json.dumps({"type": "keys", "left": True}))
                     await asyncio.sleep(0.03)
-                    assert server.players[first["player_id"]].keyboard.keys["up"]
-                    assert not server.players[second["player_id"]].keyboard.keys["up"]
+                    assert room.players[first["player_id"]].keyboard.keys["up"]
+                    assert not room.players[second["player_id"]].keyboard.keys["up"]
                 await asyncio.sleep(0.03)
-                assert second["player_id"] not in server.players
+                assert second["player_id"] not in room.players
+            await asyncio.sleep(0.03)
+            assert not server.rooms
 
     asyncio.run(scenario())
+
+
+def test_five_clients_private_rooms_and_full_room():
+    from contextlib import AsyncExitStack
+
+    import websockets
+
+    async def scenario():
+        service = RoomService()
+        async with websockets.serve(service.handler, "127.0.0.1", 0) as listener, AsyncExitStack() as stack:
+            url = f"ws://127.0.0.1:{listener.sockets[0].getsockname()[1]}"
+
+            async def handshake(**message):
+                client = await stack.enter_async_context(websockets.connect(url))
+                await client.send(json.dumps(message))
+                return client, json.loads(await client.recv())
+
+            _, first = await handshake(type="create")
+            _, other = await handshake(type="create")
+            key = first["room"]
+            assert other["room"] != key
+            for _ in range(4):
+                _, hello = await handshake(type="join", room=key)
+                assert hello["type"] == "hello"
+            _, full = await handshake(type="join", room=key)
+            _, unknown = await handshake(type="join", room="unknown")
+            assert full["type"] == unknown["type"] == "error"
+            assert len(service.rooms[key].players) == 5
+            assert len(service.rooms[other["room"]].players) == 1
+
+    asyncio.run(scenario())
+
+
+def test_setup_duplicate_names_and_authority(tmp_path):
+    room = RaceRoom(results_path=tmp_path / "results.csv")
+    host, guest = room.join(), room.join()
+    room.handle(host.id, {"type": "ready", "name": "Kath", "value": True})
+    assert room.handle(guest.id, {"type": "ready", "name": "kath", "value": True})
+    assert not guest.ready
+    room.handle(guest.id, {"type": "bot", "add": True})
+    assert len(room.players) == 2
+    room.handle(guest.id, {"type": "setup", "car": "GT", "tyre": "Grip"})
+    assert guest.racer.env.kart.limit > host.racer.env.kart.limit
+    assert guest.racer.env.kart.grip > host.racer.env.kart.grip
+    room.handle(guest.id, {"type": "ready", "value": True})
+    room.handle(host.id, {"type": "bot", "add": True})
+    assert room.start(host.id)
+    assert not room.start(host.id)
+    room.leave(host.id)
+    assert room.host_id == guest.id
+    room.phase, room.elapsed = "racing", 600
+    results = room.tick()["game"]["results"]
+    assert len(results) == 3 and all(p["finish_time"] is None for p in results)
+
+
+def test_arcade_gym_and_old_checkpoint():
+    import gymnasium as gym
+    from gymnasium.utils.env_checker import check_env
+
+    from kart_rl.envs.arcade_env import load_arcade_policy
+    from kart_rl.game.race import ROOT
+
+    env = gym.make("KartArcade-v0").unwrapped
+    check_env(env, skip_render_check=True)
+    assert env.action_space.shape == (4,) and env.observation_space.shape == (38,)
+    with pytest.raises(ValueError, match="Inkompatibles Modell"):
+        load_arcade_policy(ROOT / "runs/driver_validation_v1/winner/best.zip")
+    env.close()

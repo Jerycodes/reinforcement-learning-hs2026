@@ -84,10 +84,16 @@
       <div id="arcadeBox" style="display:none">
         <b style="color:#3fd0ff">ARCADE · MULTIPLAYER</b>
         <p class="small">Direkte Lenkung · Pfeiltasten / WASD fahren<br><b>Shift</b> driften · <b>Leertaste</b> Boost<br><b>R / Backspace</b> zurück auf die Strecke (+3 s)</p>
+        <div id="garage">
+          <label>Kart <select id="car"><option>Club</option><option>Sprint</option><option>GT</option></select></label>
+          <label>Reifen <select id="tyre"><option>Standard</option><option>Grip</option><option>Speed</option></select></label>
+          <p id="specs" class="small"></p>
+          <div class="row"><button id="ready">Bereit</button><button id="addBot">+ Bot</button><button id="removeBot">− Bot</button></div>
+        </div>
         <div class="row"><button id="arcadeStart">Rennen starten</button><button id="arcadeInvite">Einladungslink kopieren</button></div>
         <div id="arcadeInfo" class="small"></div>
         <div class="arcade-energy"><span id="arcadeEnergy" style="width:100%"></span></div>
-        <div class="small">Boost lädt sich wieder auf. Einen Drift mindestens 0,7 s halten und loslassen für Mini-Boost. Karts fahren zunächst ohne gegenseitige Kollisionen.</div>
+        <div class="small">Boost lädt sich wieder auf. Einen Drift mindestens 0,7 s halten und loslassen für Mini-Boost. Kartkontakt kostet Tempo.</div>
       </div>
       <div id="gameLaps" class="small"></div>
     </div>
@@ -578,18 +584,24 @@ function status(msg) { $('status').textContent = msg; }
 
 // ------------------------------------------------------------------ live mode
 let ws = null, liveKart = null, lidarLines = null;
+let serverError = '';
 let retryUntil = 0, retryTimer = null;   // auto-reconnect while a freshly started trainer/server is still booting
 function connectLive() {
   clearTimeout(retryTimer);
-  let opened = false;
+  let opened = false; serverError = '';
   ws = new WebSocket($('wsUrl').value);
-  ws.onopen = () => { opened = true; retryUntil = 0; status('verbunden'); $('connect').textContent = 'trennen'; };
+  ws.onopen = () => {
+    if (new URLSearchParams(location.search).has('arcade')) {
+      const room = new URLSearchParams(location.search).get('room');
+      send(room ? {type:'join',room} : {type:'create'});
+    }
+    opened = true; retryUntil = 0; status('verbunden'); $('connect').textContent = 'trennen'; };
   ws.onclose = () => {
     ws = null; training = null; $('connect').textContent = 'verbinden';
     if (!opened && Date.now() < retryUntil) {
       status(`Server startet noch – verbinde erneut … (${Math.ceil((retryUntil - Date.now()) / 1000)} s)`);
       retryTimer = setTimeout(connectLive, 2000);
-    } else status(opened ? 'Verbindung getrennt' : 'Verbindung fehlgeschlagen – läuft der Server? (Dashboard: Log des Laufs prüfen)');
+    } else status(serverError || (opened ? 'Verbindung getrennt' : 'Verbindung fehlgeschlagen – läuft der Server? (Dashboard: Log des Laufs prüfen)'));
   };
   ws.onerror = () => {};
   ws.onmessage = ev => handleLive(JSON.parse(ev.data));
@@ -650,6 +662,12 @@ function handleLive(m) {
     $('trainingInfo').style.display = isTraining ? '' : 'none';
     if (isGame) {
       game = { driver: m.driver, policy: m.policy, arcade: !!m.arcade, player_id: m.player_id, host_id: m.host_id, invite_url: m.invite_url };
+      if (m.room) {
+        const url = new URL(location.href);
+        url.searchParams.set('room',m.room);
+        history.replaceState(null,'',url);
+        game.invite_url = url.href;
+      }
       document.body.classList.toggle('arcade', !!m.arcade);
       $('viewerTitle').textContent = m.arcade ? 'ARCADE KART · MULTIPLAYER' : 'Kart-RL 3D-Viewer';
       document.title = m.arcade ? 'Arcade Kart · Multiplayer' : 'Kart-RL 3D-Viewer';
@@ -698,7 +716,7 @@ function handleLive(m) {
     const who = m.who === 'du' ? 'Du' : 'KI';
     status(`${who}: Runde ${m.lap_time.toFixed(2)} s${m.valid ? '' : ' (Bandenkontakt, ungültig)'}` + (m.best_du && m.best_ki ? ` – beste: du ${m.best_du.toFixed(2)} / KI ${m.best_ki.toFixed(2)}` : ''));
   } else if (m.type === 'error') {
-    status(m.message || 'Serverfehler');
+    serverError = m.message || 'Serverfehler'; status(serverError);
   } else if (m.type === 'episode_end') {
     status(`Episode: ${m.reason}, Runden ${(m.lap_times || []).map(t => t.toFixed(2)).join(', ')}`);
     refreshKartList();
@@ -751,19 +769,44 @@ function renderGameLaps() {
 function renderArcade() {
   const players = game.players || [], own = players.find(p => p.id === game.player_id);
   const host = game.host_id === game.player_id;
-  $('arcadeStart').disabled = !host;
+  const editable = ['lobby','finished'].includes(game.phase);
+  $('garage').hidden = !editable;
+  $('arcadeStart').hidden = !editable;
+  $('arcadeStart').disabled = !host || !players.every(p => p.ready);
+  $('ready').textContent = own?.ready ? 'Bereit zurücknehmen' : 'Bereit';
+  $('addBot').hidden = $('removeBot').hidden = !host;
+  $('addBot').disabled = players.length >= 5;
+  $('removeBot').disabled = !players.some(p => p.bot);
+  $('driverName').disabled = $('setName').disabled = !editable;
+
   $('arcadeStart').textContent = game.phase === 'lobby' ? 'Rennen starten' : 'Neues Rennen';
-  $('arcadeInfo').textContent = `${players.length}/8 Spieler · ${game.race_laps} Runden · ${host ? 'Du bist Host' : 'Host startet das Rennen'}${own?.waiting ? ' · Einstieg beim nächsten Rennen' : ''}`;
+  $('arcadeInfo').textContent = `${players.length}/5 Startplätze · ${game.race_laps} Runden · ${host ? 'Du bist Host' : 'Host startet das Rennen'}${own?.waiting ? ' · Einstieg beim nächsten Rennen' : ''}`;
   $('arcadeEnergy').style.width = `${own?.energy ?? 100}%`;
   $('arcadeBanner').style.display = '';
   const title = game.phase === 'lobby' ? 'BEREIT?' : game.phase === 'countdown' ? `${Math.ceil(game.countdown)}` : own?.finish_time != null ? 'ZIEL!' : game.phase === 'finished' ? 'RENNEN BEENDET' : game.elapsed < 1 ? 'LOS!' : '';
   $('arcadeBanner').innerHTML = `${title}<small>${game.phase === 'lobby' ? 'Name eingeben · Freunde einladen · Rennen starten' : own?.finish_time != null ? `Deine Zeit ${own.finish_time.toFixed(2)} s` : ''}</small>`;
-  $('gameLaps').innerHTML = `<h3>Live-Rangliste</h3><table style="width:100%;border-collapse:collapse"><tr><th>#</th><th>Fahrer</th><th>Runde / Zeit</th></tr>${players.map(p => `<tr style="color:${p.id === game.player_id ? '#3fd0ff' : 'inherit'}"><td>${p.rank}</td><td>${escapeHtml(p.name)}${p.id === game.player_id ? ' (du)' : ''}</td><td>${p.waiting ? 'wartet' : p.finish_time != null ? p.finish_time.toFixed(2) + ' s' : Math.min(p.lap + 1, game.race_laps) + '/' + game.race_laps}${p.penalty ? ' +' + p.penalty.toFixed(0) + 's' : ''}</td></tr>`).join('')}</table><p class="small">Arcade-Zeiten sind getrennt von den RL-Benchmarks. Ein neuer Tab bedeutet ein neues Kart.</p>`;
+  const rows = game.phase === 'finished' ? game.results : players;
+  $('gameLaps').innerHTML = `<h3>${game.phase === 'finished' ? 'Endrangliste' : game.phase === 'lobby' ? 'Startfeld' : 'Live-Rangliste'}</h3><table style="width:100%;border-collapse:collapse"><tr><th>#</th><th>Fahrer</th><th>Runde / Zeit</th></tr>${rows.map(p => `<tr style="color:${p.id === game.player_id ? '#3fd0ff' : 'inherit'}"><td>${p.rank}</td><td>${escapeHtml(p.name)}${p.id === game.player_id ? ' (du)' : ''}${p.id === game.host_id ? ' · Host' : ''}<br><small>${escapeHtml(p.car)} · ${escapeHtml(p.tyre)}</small></td><td>${game.phase === 'lobby' ? (p.ready ? '✓ bereit' : 'wählt') : p.waiting ? 'wartet' : p.finish_time != null ? p.finish_time.toFixed(2) + ' s' : game.phase === 'finished' ? 'DNF' : Math.min(p.lap + 1, game.race_laps) + '/' + game.race_laps}${p.penalty ? ' +' + p.penalty.toFixed(0) + 's' : ''}</td></tr>`).join('')}</table><p class="small">Zeiten im Ziel enthalten Zeitstrafen.</p>`;
 }
+function showSpecs() {
+  const cars = {Club:'79 km/h · ausgewogen',Sprint:'72 km/h · stärkster Antritt, agil',GT:'86 km/h · ruhige Lenkung, langsamer Antritt'};
+  const tyres = {Standard:'ausgewogene Haftung',Grip:'mehr Kurvengrip, weniger Antritt',Speed:'stärkerer Antritt, weniger Kurvengrip'};
+  $('specs').textContent = cars[$('car').value] + ' · ' + tyres[$('tyre').value];
+}
+showSpecs();
+for (const id of ['car','tyre']) $(id).onchange = () => {
+  showSpecs(); send({type:'setup',car:$('car').value,tyre:$('tyre').value});
+};
+$('ready').onclick = () => {
+  const me = game.players.find(p => p.id === game.player_id);
+  send({type:'ready',name:$('driverName').value.trim(),value:!me.ready});
+};
+$('addBot').onclick = () => send({type:'bot',add:true});
+$('removeBot').onclick = () => send({type:'bot',add:false});
 $('arcadeStart').addEventListener('click', () => send({type:'control',action:'start_race'}));
 $('arcadeInvite').addEventListener('click', async () => {
   const invite = game?.invite_url || location.href;
-  try { await navigator.clipboard.writeText(invite); status('Einladungslink kopiert – Freunde im selben WLAN können beitreten.'); }
+  try { await navigator.clipboard.writeText(invite); status('Einladungslink kopiert.'); }
   catch { status(`Einladungslink: ${invite}`); }
 });
 $('setName').addEventListener('click', () => { const n = $('driverName').value.trim(); if (n) { send({ type: 'set_name', name: n }); if (game) { game.driver = n; } try { localStorage.setItem('driverName', n); } catch (e) {} } $('driverName').blur(); $('setName').blur(); status('Name gesetzt – Pfeiltasten/WASD fahren (Klick in die 3D-Ansicht, falls nichts passiert)'); });
@@ -836,6 +879,7 @@ window.kartViewer = {
   const urls = params.getAll('replay');
   for (const u of (urls.length ? urls : params.has('game') || params.has('live') ? [] : DEFAULT_REPLAYS)) await loadReplayUrl(u, true);
   if (params.get('ws')) $('wsUrl').value = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.hostname}:${params.get('ws')}`;
+  if (params.has('arcade') && !params.has('ws')) $('wsUrl').value = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/socket';
   if (params.get('live') !== null) { setMode('live'); retryUntil = Date.now() + 90000; connectLive(); }
   if (params.get('game') !== null) { setMode('game'); retryUntil = Date.now() + 90000; connectLive(); }
   if (params.get('cam')) setCamera(params.get('cam'));
