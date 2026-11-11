@@ -11,9 +11,13 @@ from pathlib import Path
 import numpy as np
 
 from ..kart import Kart, KartParams
+from .collisions import resolve, swept_contact
 from .driver import GAME_ENV, KeyboardDriver, Racer
 
 ROOT = Path(__file__).resolve().parents[2]
+
+RULES = "KartArcade-v1"
+BOT_LEVELS = {"Club": 0.76, "Sport": 0.90, "Pro": 1.0}
 
 AVATARS = ("Fuchs", "Panda", "Luchs", "Drache")
 
@@ -29,8 +33,12 @@ TYRES = {"Standard": (1, 1), "Grip": (1.16, 0.92), "Speed": (0.89, 1.08)}
 class ArcadeKart(Kart):
     """Kinematic handling for the game only; training physics stays unchanged."""
 
-    def __init__(self):
-        super().__init__(KartParams(max_steer=0.6, steer_rate=10))
+    def __init__(self, legacy=False):
+        super().__init__(
+            KartParams(
+                max_steer=0.6, steer_rate=10, length=1.9 if legacy else 1.55, width=1.4 if legacy else 1.02
+            )
+        )
         self.configure("Club", "Standard")
         self.drifting = False
         self.boosting = False
@@ -86,6 +94,10 @@ class Player:
     ready: bool = False
     bot: bool = False
     avatar: str = "Fuchs"
+    level: str = "Sport"
+    passing_lane: float = 0.0
+    best_flying: float | None = None
+    lap_penalty: float = 0.0
 
     def release(self):
         self.keyboard.release()
@@ -97,10 +109,12 @@ class Player:
         self.keyboard.steer = self.keyboard.throttle = 0.0
         self.energy, self.drift_charge, self.mini_boost = 100.0, 0.0, 0.0
         self.laps, self.last_lap_at, self.finish_time, self.penalty = [], 0.0, None, 0.0
+        self.best_flying = None
+        self.passing_lane = self.lap_penalty = 0.0
         self.waiting = False
         self.racer.env.kart.drifting = self.racer.env.kart.boosting = False
 
-    def step(self, dt, race_laps, elapsed, controls=None):
+    def step(self, dt, race_laps, elapsed, controls=None, *, defer_laps=False):
         if self.waiting or self.finish_time is not None:
             return
         if time.perf_counter() - self.last_input > 1.0:
@@ -124,12 +138,20 @@ class Player:
         kart.drifting = drifting
         kart.boosting = bool((manual_boost or self.mini_boost > 0) and action[1] > 0)
         self.racer.step(action)
+        if not defer_laps:
+            self.score(race_laps, elapsed)
+
+    def score(self, race_laps, elapsed):
+        kart = self.racer.env.kart
         # Count net travelled distance, not repeated forward/backward crossings
         # of the start line. Respawn never gives progress.
         progress = self.racer.env.total_progress
         length = self.racer.env.track.length
         if progress >= (len(self.laps) + 1) * length:
             self.laps.append(self.racer.env.t - self.last_lap_at)
+            if len(self.laps) > 1 and self.penalty == self.lap_penalty:
+                self.best_flying = min(self.best_flying or math.inf, self.laps[-1])
+            self.lap_penalty = self.penalty
             self.last_lap_at = self.racer.env.t
         if len(self.laps) >= race_laps:
             self.finish_time = elapsed + self.penalty
@@ -146,6 +168,9 @@ class Player:
             "tyre": self.racer.env.kart.tyre,
             "lap": len(self.laps),
             "boost": self.racer.env.kart.boosting,
+            "parked": self.finish_time is not None,
+            "length": self.racer.env.kart.p.length,
+            "width": self.racer.env.kart.p.width,
             "drifting": self.racer.env.kart.drifting,
             "energy": round(self.energy, 1),
         }
@@ -160,6 +185,8 @@ class Player:
             "energy": round(self.energy, 1),
             "drift_charge": round(self.drift_charge / 1.6, 2),
             "finish_time": self.finish_time,
+            "level": self.level,
+            "best_flying": self.best_flying,
             "best": min(self.laps) if self.laps else None,
             "penalty": self.penalty,
             "waiting": self.waiting,
@@ -172,7 +199,8 @@ class Player:
 
 
 class RaceRoom:
-    def __init__(self, laps=3, max_players=5, results_path=None):
+    def __init__(self, laps=3, max_players=5, results_path=None, *, legacy=False):
+        self.legacy = legacy
         self.laps, self.max_players = laps, max_players
         self.players = {}
         self.counter = 0
@@ -212,7 +240,7 @@ class RaceRoom:
         pid = f"p{self.counter}"
         racer = Racer(pid, {**GAME_ENV, "dt": self.dt, "wall_friction": 0.14})
         racer.env.record = False
-        racer.env.kart = ArcadeKart()
+        racer.env.kart = ArcadeKart(self.legacy)
         player = Player(pid, f"Spieler {self.counter}", COLORS[(self.counter - 1) % len(COLORS)], racer)
         player.reset()
         player.waiting = self.phase in ("countdown", "racing")
@@ -312,7 +340,10 @@ class RaceRoom:
                 if message.get("add") is True:
                     if len(self.players) >= self.max_players:
                         return "Alle Startplätze sind belegt."
-                    self.join(bot=True)
+                    level = message.get("level", "Sport")
+                    if level not in tuple(BOT_LEVELS):
+                        return "Unbekannte Bot-Stufe."
+                    self.join(bot=True).level = level
                 else:
                     bots = [p.id for p in self.players.values() if p.bot]
                     if bots:
@@ -327,6 +358,18 @@ class RaceRoom:
                 and not player.waiting
                 and player.finish_time is None
             ):
+                env = player.racer.env
+                old = env.kart.state.copy()
+                target = env.track.start_pose(env.s)
+                env.kart.state[:3] = target
+                occupied = any(
+                    swept_contact(env.kart, p.racer.env.kart, env.kart.state, p.racer.env.kart.state)
+                    for p in self.players.values()
+                    if p is not player and not p.waiting and p.finish_time is None
+                )
+                env.kart.state[:] = old
+                if occupied:
+                    return "Rücksetzpunkt belegt."
                 player.racer.respawn()
                 player.release()
                 player.keyboard.steer = player.keyboard.throttle = 0.0
@@ -341,11 +384,11 @@ class RaceRoom:
         elif self.phase == "racing":
             self.elapsed += self.dt
             active = [p for p in self.players.values() if not p.waiting]
-            for player in active:
-                controller = bot_policy or rule_action
-                action = controller(player) if player.bot else None
-                player.step(self.dt, self.laps, self.elapsed, action)
-            self.resolve_contacts(active)
+            moving = [p for p in active if p.finish_time is None]
+            actions = [
+                None if not p.bot else bot_policy(p) if bot_policy else rule_action(p, moving) for p in moving
+            ]
+            advance_field(moving, actions, self.dt, self.laps, self.elapsed)
             if not active or all(p.finish_time is not None for p in active) or self.elapsed >= 600:
                 self.phase = "finished"
                 entrants = [p.hud() for p in active] + self.departed
@@ -354,24 +397,6 @@ class RaceRoom:
                 for player in self.players.values():
                     player.ready = player.bot
         return self.message()
-
-    def resolve_contacts(self, players):
-        touching = set()
-        for i, first in enumerate(players):
-            for second in players[i + 1 :]:
-                if first.finish_time is not None or second.finish_time is not None:
-                    continue
-                a, b = first.racer.env.kart, second.racer.env.kart
-                dx, dy = b.x - a.x, b.y - a.y
-                along = dx * math.cos(a.yaw) + dy * math.sin(a.yaw)
-                across = -dx * math.sin(a.yaw) + dy * math.cos(a.yaw)
-                if abs(along) < a.p.length and abs(across) < a.p.width:
-                    pair = first.id, second.id
-                    touching.add(pair)
-                    if pair not in self.contacts:
-                        faster = a if a.vx >= b.vx else b
-                        faster.state[3] *= 0.72
-        self.contacts = touching
 
     @staticmethod
     def ranked(board):
@@ -395,6 +420,7 @@ class RaceRoom:
                 "arcade": True,
                 "phase": self.phase,
                 "race_id": self.race_id,
+                "rules": RULES,
                 "grid": self.grid,
                 "host_id": self.host_id,
                 "countdown": round(self.countdown, 2),
@@ -422,13 +448,59 @@ class RaceRoom:
                 )
 
 
-def rule_action(player):
-    """Aim at a centreline point ahead and slow for tight turns."""
+def advance_field(players, actions, dt, laps, elapsed):
+    previous = [p.racer.env.kart.state.copy() for p in players]
+    origins = [(p.racer.env.s, p.racer.env.total_progress, p.racer.env.max_progress) for p in players]
+    for player, action in zip(players, actions):
+        player.step(dt, laps, elapsed, action, defer_laps=True)
+    changed = resolve(players, previous)
+    for i, p in enumerate(players):
+        env = p.racer.env
+        if i in changed or env.off_track:
+            env.s, env.lateral, env.idx = env.track.localize(env.kart.x, env.kart.y, hint=env.idx)
+            s, progress, peak = origins[i]
+            length = env.track.length
+            env.total_progress = progress + (env.s - s + length / 2) % length - length / 2
+            env.max_progress = max(peak, env.total_progress)
+            p.racer.obs = env._observe()
+        p.score(laps, elapsed)
+
+
+def rule_action(player, opponents=()):
+    """Preview curvature, cut toward the apex and choose a clear passing lane."""
     env = player.racer.env
-    kart = env.kart
-    target = env.track.point_at(env.s + 3 + kart.vx * 0.38)
+    kart, track = env.kart, env.track
+    skill = BOT_LEVELS[player.level]
+    look = 3.0 + kart.vx * 0.27
+    ahead = np.array([look, look + 4, look + 10, look + 18])
+    bends = track.curvature_ahead(env.s, ahead)
+    corner = bends[0]
+    blockers = [
+        p
+        for p in opponents
+        if p is not player
+        and 0 < (p.racer.env.s - env.s) % track.length < max(7, kart.vx * 0.85)
+        and abs(p.racer.env.lateral - env.lateral) < 1.8
+    ]
+    if blockers:
+        closest = min(blockers, key=lambda p: (p.racer.env.s - env.s) % track.length)
+        if not player.passing_lane:
+            player.passing_lane = -1.45 if closest.racer.env.lateral >= 0 else 1.45
+    elif not any(p is not player and abs(p.racer.env.s - env.s) < 5 for p in opponents):
+        player.passing_lane = 0
+    offset = player.passing_lane or float(np.clip(corner * 13, -0.95, 0.95))
+    target = track.start_pose(env.s + look, offset)
     heading = math.atan2(target[1] - kart.y, target[0] - kart.x)
     error = (heading - kart.yaw + math.pi) % (2 * math.pi) - math.pi
-    steering = np.clip(error * 2.4, -1, 1)
-    target_speed = 12 / (1 + 2 * abs(error))
-    return np.array([steering, np.clip(target_speed - kart.vx, -1, 1), -1, -1], dtype=np.float32)
+    steer = np.clip(error * (2.4 + kart.vx * 0.035), -1, 1)
+    # Lateral acceleration budget plus braking distance to each preview point.
+    corner_speeds = np.sqrt(18 * skill * kart.grip / np.maximum(abs(bends), 0.015))
+    limits = np.sqrt(corner_speeds**2 + 2 * 13 * np.maximum(ahead - look, 0))
+    straight = max(abs(bends[:3])) < 0.035 and abs(error) < 0.16
+    boost = straight and skill >= 0.88 and player.energy > 5
+    target_speed = min((kart.limit + 6 * boost) * skill, min(limits), 26 / (1 + 1.7 * abs(error)))
+    drift = skill >= 0.88 and abs(steer) > 0.48 and 8 < kart.vx < 18
+    return np.array(
+        [steer, np.clip((target_speed - kart.vx) * 1.7, -1, 1), 1 if drift else -1, 1 if boost else -1],
+        dtype=np.float32,
+    )

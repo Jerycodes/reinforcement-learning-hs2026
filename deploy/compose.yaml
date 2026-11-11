@@ -1,0 +1,25 @@
+services:
+  game:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    volumes:
+      - results:/app/runs/arcade
+  web:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [game]
+    environment:
+      KART_DOMAIN: ${KART_DOMAIN:?Set KART_DOMAIN to your DNS hostname}
+    ports:
+      - "${KART_HTTP_BIND:-80}:80"
+      - "${KART_HTTPS_BIND:-443}:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - certificates:/data
+      - caddy_config:/config
+volumes:
+  results:
+  certificates:
+  caddy_config:

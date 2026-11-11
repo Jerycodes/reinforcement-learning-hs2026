@@ -9,7 +9,7 @@ export const pilots = {
 export const paints = {Club:0x18beb6, Sprint:0xff6044, GT:0x8d73ed};
 const bands = {Standard:0xe8e4d2, Grip:0xf2a83e, Speed:0x5ed4ff};
 
-export function paddockKart(car, tyre, avatar) {
+export function paddockKart(car, tyre, avatar, length=1.55, width=1.02) {
   const root = new T.Group();
   const material = color => new T.MeshStandardMaterial({color, roughness:.48, metalness:.14});
   const paint=material(paints[car]), dark=material(0x20212d), alloy=material(0xcbd4ca);
@@ -59,6 +59,9 @@ export function paddockKart(car, tyre, avatar) {
     if(x>0) front.push(pivot);
   }
   root.userData.frontWheels=front;
+  const bounds = new T.Box3().setFromObject(root, true);
+  const size = bounds.getSize(new T.Vector3());
+  const center = bounds.getCenter(new T.Vector3());
   const flame=part(new T.ConeGeometry(.14,.72,12),new T.MeshBasicMaterial({color:0x5de8ff}),-1.08,.26,0);
   flame.rotation.z=Math.PI/2;flame.visible=false;root.userData.boostFlame=flame;
   const sparks=new T.Group(), sparkMaterial=new T.MeshBasicMaterial({color:0xffcc45});
@@ -68,6 +71,11 @@ export function paddockKart(car, tyre, avatar) {
     sparks.add(spark);
   }
   sparks.visible=false;root.add(sparks);root.userData.sparks=sparks;
+  for (const part of root.children) {
+    part.position.x -= center.x;
+    part.position.z -= center.z;
+  }
+  root.scale.set(length/size.x, width/size.z, width/size.z);
   return root;
 }
 

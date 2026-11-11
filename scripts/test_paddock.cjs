@@ -51,11 +51,18 @@ async function enter(page,link,name,avatar,car,tyre){
     args:['--enable-unsafe-swiftshader','--disable-renderer-backgrounding','--disable-background-timer-throttling']});
   try{
     const errors=[];
-    const pages=await Promise.all([0,1].map(async()=>{const p=await browser.newPage({viewport:{width:1024,height:640}});
-      p.on('pageerror',e=>errors.push(e.message));return p;}));
+    const pages=await Promise.all([0,1].map(async()=>{const p=await browser.newPage({viewport:{width:1024,height:640},ignoreHTTPSErrors:new URL(url).hostname==='localhost'});
+      p.on('pageerror',e=>errors.push(e.message));
+      if(url.startsWith('https:'))p.on('websocket',ws=>{
+        if(ws.url()!=='wss://'+new URL(url).host+'/socket') errors.push('unexpected socket '+ws.url());
+      });return p;}));
     const [a,b]=pages;
     await enter(a,url,'Kath','Fuchs','Club','Standard');
-    await enter(b,a.url(),'Gast','Panda','GT','Grip');
+    await a.context().grantPermissions(['clipboard-read','clipboard-write']);
+    await a.click('#copyLink');
+    const invite=await a.evaluate(()=>navigator.clipboard.readText());
+    assert.equal(invite,a.url());
+    await enter(b,invite,'Gast','Panda','GT','Grip');
     await a.click('#plusBot');await a.click('#plusBot');await a.click('#plusBot');
     await a.waitForFunction(()=>window.kartViewer.gameState().players.length===5);
     assert(await a.locator('#greenFlag').isDisabled());
@@ -81,6 +88,8 @@ async function enter(page,link,name,avatar,car,tyre){
     const result=await state(a);
     assert.equal(result.phase,'finished');assert(result.results.every(p=>p.lap===3 && p.finish_time>0));
     await b.waitForSelector('#podium:visible');assert.deepEqual(result.results,(await state(b)).results);
+    await a.click('#saveLap');
+    assert.match(await a.locator('#personalRecord').innerText(),/Club \/ Standard · KartArcade-v1/);
     await a.screenshot({path:path.join(artifacts,'result.png')});
     await b.click('#againReady');await a.click('#againReady');await a.click('#againStart');
     await a.waitForFunction(()=>window.kartViewer.gameState().phase==='countdown');

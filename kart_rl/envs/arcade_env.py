@@ -7,7 +7,7 @@ import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
 
-from ..game.race import CARS, TYRES, RaceRoom
+from ..game.race import CARS, RULES, TYRES, RaceRoom, advance_field
 
 
 def observation(player):
@@ -26,8 +26,8 @@ def observation(player):
 
 
 class ArcadeEnv(gym.Env):
-    def __init__(self, laps=3):
-        self.room = RaceRoom(laps)
+    def __init__(self, laps=3, *, legacy=False):
+        self.room = RaceRoom(laps, legacy=legacy)
         self.player = self.room.join()
         self.observation_space = spaces.Box(-10, 10, shape=observation(self.player).shape, dtype=np.float32)
         self.action_space = spaces.Box(-1, 1, shape=(4,), dtype=np.float32)
@@ -48,7 +48,11 @@ class ArcadeEnv(gym.Env):
         env = self.player.racer.env
         previous = env.total_progress
         self.elapsed += self.room.dt
-        self.player.step(self.room.dt, self.room.laps, self.elapsed, np.clip(action, -1, 1))
+        controls = np.clip(action, -1, 1)
+        if self.room.legacy:
+            self.player.step(self.room.dt, self.room.laps, self.elapsed, controls)
+        else:
+            advance_field([self.player], [controls], self.room.dt, self.room.laps, self.elapsed)
         finished = self.player.finish_time is not None
         reward = env.total_progress - previous - self.room.dt * 0.2 - float(env.off_track)
         return (
@@ -72,12 +76,12 @@ def load_arcade_policy(path):
     with ZipFile(path) as archive:
         metadata = json.loads(archive.read("data"))
     if (
-        metadata.get("arcade_rules") != "KartArcade-v0"
+        metadata.get("arcade_rules") != RULES
         or metadata.get("observation_space", {}).get("_shape") != [38]
         or metadata.get("action_space", {}).get("_shape") != [4]
     ):
         raise ValueError(
-            "Inkompatibles Modell: KartArcade-v0 mit 38 Beobachtungen und 4 Aktionen erforderlich."
+            "Inkompatibles Modell: KartArcade-v1 mit 38 Beobachtungen und 4 Aktionen erforderlich."
         )
     from stable_baselines3 import PPO
 

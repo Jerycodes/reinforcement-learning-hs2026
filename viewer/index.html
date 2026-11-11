@@ -63,7 +63,7 @@
 
   <div id="liveBox" style="display:none">
     <h3 id="connectionHeading">Live (Python-Server)</h3>
-    <div class="row" id="connectionRow"><input type="text" id="wsUrl" value="ws://localhost:8765" style="flex:1"><button id="connect">verbinden</button></div>
+    <div class="row" id="connectionRow"><input type="text" id="wsUrl" placeholder="WebSocket-Adresse" style="flex:1"><button id="connect">verbinden</button></div>
     <div id="trainingInfo" class="small" style="display:none; margin:6px 0">Training läuft. Das Kart fährt den <b>aktuellen Trainingsstand</b> (deterministisch, ohne Erkundungsrauschen) in Echtzeit; nach jedem Update fährt es mit der neuen Policy weiter. Policy wechseln und Parameter geht im Live-Server-Modus (<code>python -m kart_rl.live.server</code>).</div>
     <div id="gameBox" style="display:none">
       <div id="classicGameHelp" class="small" style="margin:6px 0">Du fährst gegen das Modell (halbtransparenter Geist, keine Kollision). Gleiche Physik, gleiche Bande: Kontakt kostet Tempo und macht die Runde ungültig.<br>
@@ -339,7 +339,7 @@ let hudIndex = 0;
 
 function addKart(name, traj, meta = {}) {
   const color = typeof meta.color === 'number' ? meta.color : COLORS[karts.length % COLORS.length];
-  const group = meta.avatar ? paddockKart(meta.car,meta.tyre,meta.avatar) : makeKart(color);
+  const group = meta.avatar ? paddockKart(meta.car,meta.tyre,meta.avatar,meta.length,meta.width) : makeKart(color);
   scene.add(group);
   const n = traj.t.length;
   const g = new THREE.BufferGeometry();
@@ -507,6 +507,7 @@ function frame(dt) {
     const st = (mode === 'live' || mode === 'game') ? (k.traj.t.length ?
       (game?.arcade ? sample(k.traj, k.traj.t.at(-1) - .05 + Math.max(0, performance.now() - (k.receivedAt || performance.now())) / 1000) : at(k.traj, k.traj.t.length - 1)) : null) : sample(k.traj, tCursor);
     if (!st) continue;
+    k.group.visible = !game?.arcade || k === hudK || !st.parked;
     k.group.position.copy(W(st.x, st.y));
     k.group.rotation.y = st.yaw;
     if (k.group.userData.frontWheels) for (const w of k.group.userData.frontWheels) w.rotation.y = st.steer || 0;
@@ -713,7 +714,7 @@ function handleLive(m) {
       }
     }
     for (const st of m.states) {
-      const k = liveKartFor(st.id, m.game?.arcade ? st.name : m.game ? (st.id === 'du' ? (m.game.driver === 'du' ? 'du' : m.game.driver) : `KI: ${m.game.policy.split('/').slice(-2).join('/')}`) : `Training-Env ${st.id}`, st.color, m.game?.arcade ? {avatar:st.avatar,car:st.car,tyre:st.tyre} : null);
+      const k = liveKartFor(st.id, m.game?.arcade ? st.name : m.game ? (st.id === 'du' ? (m.game.driver === 'du' ? 'du' : m.game.driver) : `KI: ${m.game.policy.split('/').slice(-2).join('/')}`) : `Training-Env ${st.id}`, st.color, m.game?.arcade ? {avatar:st.avatar,car:st.car,tyre:st.tyre,length:st.length,width:st.width} : null);
       if (st.ghost && !k.isGhost) makeGhost(k);
       if (st.hist && st.hist.length) {   // intermediate positions since the last message -> smooth trail
         for (const [t, x, y, v] of st.hist) {
@@ -847,8 +848,9 @@ window.kartViewer = {
   const params = new URLSearchParams(location.search);
   const urls = params.getAll('replay');
   for (const u of (urls.length ? urls : params.has('game') || params.has('live') ? [] : DEFAULT_REPLAYS)) await loadReplayUrl(u, true);
-  if (params.get('ws')) $('wsUrl').value = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.hostname}:${params.get('ws')}`;
-  if (params.has('arcade') && !params.has('ws')) $('wsUrl').value = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/socket';
+  $('wsUrl').value = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/socket';
+  if (!club && !params.has('ws') && location.protocol === 'http:') $('wsUrl').value = 'ws://' + location.hostname + ':8765';
+  if (params.get('ws') && location.protocol !== 'https:') $('wsUrl').value = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.hostname}:${params.get('ws')}`;
   if (params.get('live') !== null) { setMode('live'); retryUntil = Date.now() + 90000; connectLive(); }
   if (params.get('game') !== null && !club) { setMode('game'); retryUntil = Date.now() + 90000; connectLive(); }
   if (params.get('cam')) setCamera(params.get('cam'));
