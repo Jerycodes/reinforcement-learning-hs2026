@@ -43,3 +43,5 @@ html.club body {font-family:Roboto,"Segoe UI",sans-serif}
 #startSignal:has(.grid-list){left:16px;top:18px;transform:none}.grid-list{padding:10px 15px}.grid-list b{font-size:19px}
 
 .lights.green i{background:#86ff64;box-shadow:0 0 18px #62f891}
+
+.driver-camera #startSignal .lights { display:none }

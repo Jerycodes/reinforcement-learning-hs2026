@@ -18,9 +18,13 @@ Auf einem frischen Checkout zuerst `py -3 -m venv .venv` und `.\.venv\Scripts\py
 
 ### Aufstellung und Zeitmessung
 
-Die Roggwiler Mittellinie verläuft nach der Startlinie zunächst westwärts. Die erste deutliche Richtungsänderung liegt bei etwa 22 m. Auf der rund 7,2 m breiten Geraden lost der Server für jedes Rennen neu. Die Spuren liegen je 1,55 m von der Mittellinie entfernt, die Reihen 3,8 m auseinander, die rechte Spur ist 0,85 m nach hinten versetzt. Platz eins steht bei 12 m, Platz fünf bei 4,4 m. Alle Karts stehen vollständig jenseits der Ziellinie und vor der Kurve.
+In Fahrtrichtung liegt die Linie vor dem gesamten Feld. Die Projektion des ersten Startplatzes liegt 8 m vor der Überfahrt, die des fünften 15,6 m. Die Spuren liegen 1,55 m links und rechts der Mittellinie. Reihenabstand 3,8 m, Versatz innerhalb der Reihe 0,85 m. Der Server lost aus und sendet Position und Gierwinkel jedes Platzes. Der Viewer verwendet diese Werte für Kart, Box und Startnummer. Die physische Ampel steht an der Linie.
 
-Jedes Kart startet bei null abgeschlossenen Runden. Der Rennfortschritt beginnt an seiner tatsächlichen Projektion auf die Mittellinie. Beim ersten regulären Umlauf über die Linie zählt Runde eins, beim dritten endet das Rennen. Die Auslosung wird zusammen mit Positionen und Ausrichtung an beide Browser gesendet. Die Solo-Gymnasium-Umgebung startet an der Ziellinie. Die neuen Maße gehören zu KartArcade-v1.
+Die erste Überfahrt öffnet die Runde. Erst nach den Kontrollpunkten bei 25 %, 50 % und 75 %, einer vollen Nettorundendistanz und der nächsten Vorwärtsüberfahrt zählt eine Runde. Kontakte werden vor der Wertung aufgelöst. Für die fliegende Bestzeit zählen weiterhin nur Folgerunden ohne Rücksetzen.
+
+Nach der Aufstellungsansicht ist die Fahrersicht aktiv. Der Augenpunkt liegt 72 cm über dem Asphalt und 35 cm hinter der Kartmitte. Das vertikale Sichtfeld beträgt 54°. Mit **1 / 2 / 3 / 4** wechselst du zu Verfolger-, Fahrer-, Drauf- und freier Sicht.
+
+[Startfeld mit fünf Karts](img/roggwil-startfeld.png) · [Fahrersicht während der Startampel](img/roggwil-fahrersicht.png)
 
 ### Browsertest wiederholen
 
@@ -38,9 +42,19 @@ Standardreifen sind die Referenz. Grip-Reifen erhöhen die Kurvenreaktion um 16 
 
 ### Maßstab, Bot-Tempo und persönliche Referenz
 
-Die unveränderten 640 Streckenquerschnitte sind 4,936 bis 10,200 m breit, Median 6,906 m, Startgerade rund 7,18 m. Der Arcade-Körper misst jetzt 1,55 × 1,02 m (zuvor 1,90 × 1,40 m). Dasselbe Rechteck gilt für Bandenspielraum und Kartkontakte. Im Rennen skaliert der Viewer die sichtbare Karosserie nach den Servermaßen. Flammen und Driftfunken gehören nicht zur Karosserie. Zwischen zwei gerade ausgerichteten Karts auf den Startspuren bleiben 2,08 m seitlicher Abstand. Zwei Karts nebeneinander lassen selbst beim schmalsten gemessenen Querschnitt insgesamt 2,90 m für Zwischenraum und Außenabstände. In Kurven hängt der Platz vom Anstellwinkel ab.
+Für die Arcade-Variante wurde das gesamte Roggwiler Layout um Faktor 1,35 skaliert. So bleiben auch die Abstände zwischen benachbarten Kurven erhalten. Asphalt, Banden und physische Kollisionsmaske beruhen auf denselben Streckenquerschnitten. Die Karts messen weiterhin 1,55 × 1,02 m. Das klassische Layout bleibt separat verfügbar.
 
-Solo-Vergleich in Simulationssekunden, Roggwil, Club-Kart, Standardreifen, stehender Start bei s = 0. Die erste Runde enthält den Start. **Fliegend** ist das Mittel der beiden folgenden vollen Runden. Die Messung ist deterministisch und beschreibt einen Fahrer ohne Verkehr.
+| Messgröße | v1 | v2 |
+|---|---:|---:|
+| Rundenlänge | 639,64 m | 863,51 m |
+| Asphaltbreite, Minimum / Median | 4,94 / 6,91 m | 6,66 / 9,32 m |
+| Erlaubter seitlicher Bereich für die Kartmitte, Minimum / Median | 3,60 / 5,60 m | 5,52 / 8,28 m |
+| Richtungsänderung bei 100 ms Tastendruck, 36 km/h | 10,72° | 1,65° |
+| Richtungsänderung bei 100 ms Tastendruck, 79,2 km/h | 7,52° | 1,12° |
+
+Messung mit `python -m scripts.measure_arcade_handling`. An 640 Querschnitten tastet das Skript mit dem tangential ausgerichteten Kart die Kollisionsmaske in 2-cm-Schritten ab, einschließlich 10 cm Randreserve. Schräg stehende Karts benötigen mehr Platz. Der Lenktest verwendet Club/Standard und misst einschließlich der Rückstellung. Die Tastatur baut den normierten Einschlag mit 3,0 pro Sekunde auf und mit 6,4 pro Sekunde ab. Kleine Ausschläge werden zusätzlich abgeflacht, die Drehgeschwindigkeit sinkt bei zunehmendem Tempo. Kart- und Reifeneinflüsse bleiben aktiv.
+
+Historischer Solo-Vergleich auf der kürzeren Strecke in Simulationssekunden, Roggwil, Club-Kart, Standardreifen, stehender Start bei s = 0. Die erste Runde enthält den Start. **Fliegend** ist das Mittel der beiden folgenden vollen Runden. Die Messung ist deterministisch und beschreibt einen Fahrer ohne Verkehr.
 
 | Fahrer | Runde 1 | Runde 2 | Runde 3 | Fliegend |
 |---|---:|---:|---:|---:|
@@ -49,7 +63,7 @@ Solo-Vergleich in Simulationssekunden, Roggwil, Club-Kart, Standardreifen, stehe
 | Sport, v1 | 42,03 | 41,27 | 41,40 | 41,33 |
 | Pro, v1 | 40,30 | 39,67 | 39,90 | 39,78 |
 
-Mit `python -m scripts.benchmark_arcade` lassen sich die v1-Werte reproduzieren. Früher betrug das Zieltempo maximal 12 m/s und es gab keine Boost- oder Driftanforderung. Der neue Fahrer liest vier vorausliegende Krümmungen, plant seine Bremsung, zielt zum Scheitelpunkt und hält beim Überholen eine seitlich versetzte Linie. Der Host wählt die Stufe beim Hinzufügen. Sport und Pro nutzen den regulären Boostvorrat und die gemeinsame Driftmechanik. Kart, Reifen, Beschleunigung und Geschwindigkeitsbegrenzer gelten für alle gleich. Bei einem explizit geladenen PPO-Modell steuert dessen Policy den Bot.
+Mit `python -m scripts.benchmark_arcade` misst man das aktuelle v2-Regelwerk. Früher betrug das Zieltempo maximal 12 m/s und es gab keine Boost- oder Driftanforderung. Der neue Fahrer liest vier vorausliegende Krümmungen, plant seine Bremsung, zielt zum Scheitelpunkt und hält beim Überholen eine seitlich versetzte Linie. Der Host wählt die Stufe beim Hinzufügen. Sport und Pro nutzen den regulären Boostvorrat und die gemeinsame Driftmechanik. Kart, Reifen, Beschleunigung und Geschwindigkeitsbegrenzer gelten für alle gleich. Bei einem explizit geladenen PPO-Modell steuert dessen Policy den Bot.
 
 Eine persönlich gefahrene Vergleichszeit liegt noch nicht vor. Nach einem Rennen zeigt die Auswertung die schnellste fliegende Runde des eigenen Fahrers ohne Rücksetzen auf dieser Runde. Über **Als persönliche Bestzeit merken** speicherst du sie bewusst in diesem Browser. In der Lobby und im Ergebnis siehst du den Rekord für denselben Namen, Kart, Reifen, Ursprung und dieselbe Regelversion. Eine langsamere Zeit ersetzt keine schnellere. Private Fenster oder gelöschte Browserdaten können den lokalen Rekord verlieren.
 
@@ -68,13 +82,13 @@ Die Roggwiler Strecke, ihre Mittellinie, LiDAR, die Kartkontur und Bandenkollisi
 - `kart_rl/game/arcade.py` verwaltet Verbindungen, Raumlinks und Verteilung der Zustände.
 - `kart_rl/envs/arcade_env.py` nutzt denselben Fahrerschritt in einer Solo-Gymnasium-Umgebung. Die 38 Beobachtungswerte bestehen aus 30 Strecken-/Fahrzustandswerten sowie Boostvorrat, Driftladung, Mini-Boost-Restzeit und fünf Setupwerten. Die vier Aktionen in [-1,1] sind Lenkung, Gas/Bremse, Drift und Boost. Positive Werte aktivieren die letzten beiden. Reward pro Schritt ist der vorzeichenbehaftete Fortschritt in Metern minus 0,2 × Schrittzeit und minus 1 bei Bandenkontakt. Das Ziel gibt zusätzlich 10 Punkte. Zielankunft beendet die Episode, Zeitablauf kürzt sie ab. Beim Reset werden Kart und Reifen variiert.
 
-Die bisherigen Arcade-PPO-Archive können weiterhin mit SB3 und Gymnasium `KartArcade-v0` in ihrer Originalgeometrie ausgewertet werden. Für neue Rennen erwartet der Lader die Kennung `KartArcade-v1`. Beobachtungs- und Aktionsdimensionen sowie die Reward-Formel sind gleich geblieben. Körperabstände und Bandenkontakte ändern jedoch die Dynamik. Alte Arcade-Policies für v1 neu trainieren und evaluieren. Das Solotraining enthält keine Gegnerbeobachtungen. Die Regelbots brauchen kein Training.
+Die bisherigen Arcade-PPO-Archive können weiterhin mit SB3 und Gymnasium `KartArcade-v0` bzw. `KartArcade-v1` in ihrer Originalgeometrie ausgewertet werden. Für neue Rennen erwartet der Lader die Kennung `KartArcade-v2`. Beobachtungs- und Aktionsdimensionen sowie die Reward-Formel sind gleich geblieben. Lenkung, Rundenerkennung und Strecke ändern die Dynamik. Alte Arcade-Policies für v2 neu trainieren und evaluieren. Das Solotraining enthält keine Gegnerbeobachtungen. Die Regelbots brauchen kein Training.
 
 Jerys Fahr-PPO und der optimierte Lap-Checkpoint verwenden 30 Beobachtungswerte und zwei Aktionen. Der Arcade-Server verwendet standardmässig den regelbasierten Fahrer. Ein explizit gewähltes Modell wird erst nach Prüfung der gespeicherten Raumdimensionen und der Arcade-Kennung geladen. Nur eigene, vertrauenswürdige lokale Modellarchive angeben.
 
 ```powershell
-.\.venv\Scripts\python.exe -m train.train_arcade --steps 250000 --output runs/arcade_v1/policy.zip
-.\.venv\Scripts\python.exe -m kart_rl.game --arcade --arcade-policy runs/arcade_v1/policy.zip --http 8031 --ws 8796 --open
+.\.venv\Scripts\python.exe -m train.train_arcade --steps 250000 --output runs/arcade_v2/policy.zip
+.\.venv\Scripts\python.exe -m kart_rl.game --arcade --arcade-policy runs/arcade_v2/policy.zip --http 8031 --ws 8796 --open
 ```
 
 Den vorherigen Server vor einem Neustart auf denselben Ports beenden. Das Training übt Solorunden. Vor einem Einsatz als Renngegner Zielquote und Rundenzeiten über alle Kombinationen prüfen. Mit `.\.venv\Scripts\python.exe -m pytest -q` laufen auch die Raum-, Rennregel- und Gymnasium-Tests.

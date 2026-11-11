@@ -35,11 +35,12 @@ def test_each_player_has_own_controls_and_host_only_start(tmp_path):
     assert server.start(one.id)
     server.countdown = 0
     server.tick()
+    start_distance = one.racer.env.total_progress
     server.handle(one.id, {"type": "keys", "up": True})
     for _ in range(30):
         one.last_input = time.perf_counter()
         server.tick()
-    assert one.racer.env.total_progress > 3
+    assert one.racer.env.total_progress - start_distance > 3
     assert two.racer.env.kart.speed == 0
     assert one.racer.env.kart is not two.racer.env.kart
     server.leave(one.id)
@@ -86,7 +87,13 @@ def test_race_distance_and_respawn_penalty_cannot_be_spoofed(tmp_path):
     progress = player.racer.env.total_progress
     server.handle(player.id, {"type": "control", "action": "respawn"})
     assert player.penalty == 3 and player.racer.env.total_progress == progress
-    player.racer.env.total_progress = player.racer.env.track.length + 1
+    env = player.racer.env
+    env.total_progress = env.track.length + 1
+    server.tick()
+    assert player.finish_time is None  # distance alone is insufficient
+    player.next_gate = 4  # isolate the terminal crossing after the three sector gates
+    env.kart.reset(*env.track.start_pose(env.track.length - 0.1), speed=8)
+    env.s, env.lateral, env.idx = env.track.localize(env.kart.x, env.kart.y)
     server.tick()
     assert player.finish_time is not None and server.phase == "finished"
     assert player.finish_time == pytest.approx(server.elapsed + 3)
@@ -226,8 +233,8 @@ def test_grid_clearance_order_and_standing_start(tmp_path, monkeypatch):
     for slot in room.grid:
         env = room.players[slot["id"]].racer.env
         assert env._clearance() > env.cfg.off_track_margin
-        assert min(env.track.localize(x, y)[0] for x, y in env.kart.footprint()) > 2
-        assert max(env.track.localize(x, y)[0] for x, y in env.kart.footprint()) < 15
+        assert min(env.track.localize(x, y)[0] for x, y in env.kart.footprint()) > env.track.length - 18
+        assert max(env.track.localize(x, y)[0] for x, y in env.kart.footprint()) < env.track.length - 6
         assert (slot["x"], slot["y"], slot["yaw"]) == pytest.approx((env.kart.x, env.kart.y, env.kart.yaw))
         for other in room.grid[: slot["position"] - 1]:
             # Disjoint bounding circles imply disjoint oriented bodies.
@@ -252,15 +259,39 @@ def test_first_forward_finish_line_crossing_from_grid(tmp_path):
     player.ready = True
     room.start(player.id)
     env = player.racer.env
-    start = env.s
-    for i in range(3000):
+    crossings = 0
+    for i in range(6500):
         previous = env.s
         player.step(room.dt, 3, (i + 1) * room.dt, rule_action(player))
         if previous - env.s > env.track.length / 2:
-            assert len(player.laps) == 1
-            assert env.total_progress - start > env.track.length - 14
-            assert player.finish_time is None
-            break
-        assert player.laps == []
-    else:
-        pytest.fail("Regelbot hat die Ziellinie nicht erreicht.")
+            crossings += 1
+            assert len(player.laps) == crossings - 1
+            if crossings == 2:
+                return
+        assert player.finish_time is None
+    pytest.fail("Fehlende Start- oder Zielüberfahrt.")
+
+
+def test_finish_requires_sector_sequence_and_forward_net_distance():
+    player = RaceRoom().join()
+    env = player.racer.env
+    length = env.track.length
+    player.step_start_s = length - 0.2
+    env.s = 0.15
+    for gate, distance in [(2, length), (4, 2.0)]:
+        player.next_gate = gate
+        env.total_progress = distance
+        player.score(3, 1)
+        assert not player.laps
+    player.next_gate = 4
+    env.total_progress = length + env.s
+    player.score(3, 2)
+    assert len(player.laps) == 1
+
+
+def test_short_keyboard_tap_is_gentler_at_speed():
+    from scripts.measure_arcade_handling import tap
+
+    low, high = [tap(speed, previous=False) for speed in (10, 22)]
+    assert 1 < high < low < 2
+    assert high < tap(22, previous=True) / 4

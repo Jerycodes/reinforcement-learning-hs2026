@@ -10,6 +10,7 @@ register(id="KartLap-v0", entry_point="kart_rl.envs.lap_env:KartLapEnv")
 register(id="KartStrategy-v0", entry_point="kart_rl.envs.strategy_env:KartStrategyEnv")
 
 register(id="KartArcade-v0", entry_point="kart_rl.envs.arcade_env:ArcadeEnv", kwargs={"legacy": True})
-register(id="KartArcade-v1", entry_point="kart_rl.envs.arcade_env:ArcadeEnv")
+register(id="KartArcade-v1", entry_point="kart_rl.envs.arcade_env:ArcadeEnv", kwargs={"previous": True})
+register(id="KartArcade-v2", entry_point="kart_rl.envs.arcade_env:ArcadeEnv")
 
 __all__ = ["Kart", "KartParams", "Track"]

@@ -27,6 +27,7 @@ export function paddockKart(car, tyre, avatar, length=1.55, width=1.02) {
   box(.69,.425,0,.35,.035,.11,alloy);
   box(-.83,.27,0,.12,.18,1.16,dark);
   for (const z of [-.48,.48]) oval(-.12,.28,z,.54,.18,.15,paint);
+  const driverStart=root.children.length;
   oval(-.24,.46,0,.29,.34,.29,dark);
   oval(-.15,.59,0,.21,.27,.23,fur);
   oval(-.17,.96,0,.275,.26,.265,fur);
@@ -45,8 +46,15 @@ export function paddockKart(car, tyre, avatar, length=1.55, width=1.02) {
   oval(-.16,.746,0,.197,.065,.206,trim);
   oval(.06,.873,0,.10,.071,.15,trim);
   box(.162,.988,-.045,.01,.018,.19,alloy);
+  root.userData.driverParts=root.children.slice(driverStart);
   const steering=part(new T.TorusGeometry(.146,.027,8,20),dark,.17,.59,0);
   steering.rotation.y=Math.PI/2-.35;
+  root.userData.rim=steering;
+  for(const a of [0,2.1,4.2]){
+    const spoke=new T.Mesh(new T.BoxGeometry(.138,.016,.024),alloy);
+    spoke.position.set(.069*Math.cos(a),.069*Math.sin(a),0);
+    spoke.rotation.z=a;steering.add(spoke);
+  }
   if(car==='GT') {box(-.72,.40,0,.09,.37,.08,dark);box(-.76,.58,0,.25,.075,1.0,paint);}
   if(car==='Sprint') box(.32,.39,0,.17,.17,.48,paint);
   const front=[];

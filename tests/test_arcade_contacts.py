@@ -81,6 +81,7 @@ def test_contact_near_line_scored_only_after_resolution():
     length = a.racer.env.track.length
     place(a, length - 1.8, 0, 28)
     place(b, length - 0.18, 0, 0)
+    a.next_gate = b.next_gate = 4  # both have passed the three sector gates
     for i in range(4):
         advance_field([a, b], [BOOST, GAS], room.dt, 1, (i + 1) * room.dt)
         check_field([a, b])
@@ -137,3 +138,16 @@ def test_bot_uses_normal_boost_budget_and_responds_to_traffic():
     assert bot.energy < 100
     passing = rule_action(bot, [bot, leader])
     assert bot.passing_lane and abs(passing[0] - action[0]) > 0.1
+
+
+def test_side_by_side_at_narrowest_cross_section():
+    room = RaceRoom()
+    players = [room.join(), room.join()]
+    track = players[0].racer.env.track
+    section = track.s[int(track.width.argmin())]
+    for player, lateral in zip(players, [-1.05, 1.05]):
+        place(player, section - 2, lateral, 12)
+    for tick in range(11):
+        advance_field(players, [GAS, GAS], room.dt, 3, (tick + 1) * room.dt)
+        check_field(players)
+    assert all(p.racer.env.s > section for p in players)

@@ -16,7 +16,7 @@ from .driver import GAME_ENV, KeyboardDriver, Racer
 
 ROOT = Path(__file__).resolve().parents[2]
 
-RULES = "KartArcade-v1"
+RULES = "KartArcade-v2"
 BOT_LEVELS = {"Club": 0.76, "Sport": 0.90, "Pro": 1.0}
 
 AVATARS = ("Fuchs", "Panda", "Luchs", "Drache")
@@ -33,7 +33,8 @@ TYRES = {"Standard": (1, 1), "Grip": (1.16, 0.92), "Speed": (0.89, 1.08)}
 class ArcadeKart(Kart):
     """Kinematic handling for the game only; training physics stays unchanged."""
 
-    def __init__(self, legacy=False):
+    def __init__(self, legacy=False, previous=False):
+        self.modern = not (legacy or previous)
         super().__init__(
             KartParams(
                 max_steer=0.6, steer_rate=10, length=1.9 if legacy else 1.55, width=1.4 if legacy else 1.02
@@ -50,6 +51,8 @@ class ArcadeKart(Kart):
 
     def step(self, steer_cmd, throttle_cmd, dt):
         steer = float(np.clip(steer_cmd, -1, 1))
+        if self.modern:
+            steer = 0.65 * steer + 0.35 * steer**3
         throttle = float(np.clip(throttle_cmd, -1, 1))
         x, y, yaw, vx, vy, _, _ = self.state
         acceleration = (
@@ -62,6 +65,8 @@ class ArcadeKart(Kart):
         limit = self.limit + (6 if self.boosting else 0)
         vx = float(np.clip(vx + acceleration * dt, 0, max(limit, vx - 8 * dt)))
         yaw_rate = steer * 3.5 * self.handling * self.grip / (1 + vx / 18) * min(vx / 2.5, 1)
+        if self.modern:
+            yaw_rate = steer * 3.15 * self.handling * self.grip / (1 + vx / 15) * min(vx / 2.5, 1)
         if self.drifting:
             yaw_rate *= 1.2
         lateral_target = -steer * vx * 0.2 / self.grip if self.drifting else 0.0
@@ -98,6 +103,9 @@ class Player:
     passing_lane: float = 0.0
     best_flying: float | None = None
     lap_penalty: float = 0.0
+    next_gate: int = 1
+    lap_origin: float = 0.0
+    step_start_s: float = 0.0
 
     def release(self):
         self.keyboard.release()
@@ -105,6 +113,8 @@ class Player:
 
     def reset(self):
         self.racer.reset()
+        self.next_gate = 1
+        self.lap_origin = 0.0
         self.release()
         self.keyboard.steer = self.keyboard.throttle = 0.0
         self.energy, self.drift_charge, self.mini_boost = 100.0, 0.0, 0.0
@@ -137,6 +147,7 @@ class Player:
         self.energy = float(np.clip(self.energy + (-38 if manual_boost else 12) * dt, 0, 100))
         kart.drifting = drifting
         kart.boosting = bool((manual_boost or self.mini_boost > 0) and action[1] > 0)
+        self.step_start_s = self.racer.env.s
         self.racer.step(action)
         if not defer_laps:
             self.score(race_laps, elapsed)
@@ -147,7 +158,20 @@ class Player:
         # of the start line. Respawn never gives progress.
         progress = self.racer.env.total_progress
         length = self.racer.env.track.length
-        if progress >= (len(self.laps) + 1) * length:
+        completed = progress >= (len(self.laps) + 1) * length
+        if kart.modern:
+            env = self.racer.env
+            gate_s = self.next_gate % 4 * length / 4
+            travel = (env.s - self.step_start_s) % length
+            # Only the forward crossing in this physical tick can open the next gate.
+            crossed = 0 < (gate_s - self.step_start_s) % length <= travel < 2.5
+            line_progress = progress - env.s
+            completed = crossed and self.next_gate == 4 and line_progress - self.lap_origin >= length - 0.1
+            if crossed:
+                if self.next_gate == 0 or completed:
+                    self.lap_origin = line_progress
+                self.next_gate = 1 if self.next_gate == 4 else self.next_gate + 1
+        if completed:
             self.laps.append(self.racer.env.t - self.last_lap_at)
             if len(self.laps) > 1 and self.penalty == self.lap_penalty:
                 self.best_flying = min(self.best_flying or math.inf, self.laps[-1])
@@ -181,7 +205,7 @@ class Player:
             "name": self.name,
             "color": self.color,
             "lap": len(self.laps),
-            "progress": max(0, self.racer.env.total_progress),
+            "progress": self.racer.env.total_progress,
             "energy": round(self.energy, 1),
             "drift_charge": round(self.drift_charge / 1.6, 2),
             "finish_time": self.finish_time,
@@ -199,7 +223,8 @@ class Player:
 
 
 class RaceRoom:
-    def __init__(self, laps=3, max_players=5, results_path=None, *, legacy=False):
+    def __init__(self, laps=3, max_players=5, results_path=None, *, legacy=False, previous=False):
+        self.previous = previous
         self.legacy = legacy
         self.laps, self.max_players = laps, max_players
         self.players = {}
@@ -238,10 +263,13 @@ class RaceRoom:
                 raise ValueError("Unbekannte Auswahl.")
         self.counter += 1
         pid = f"p{self.counter}"
-        racer = Racer(pid, {**GAME_ENV, "dt": self.dt, "wall_friction": 0.14})
+        track = "race_inn_roggwil" if self.legacy or self.previous else "roggwil_arcade"
+        racer = Racer(pid, {**GAME_ENV, "track": track, "dt": self.dt, "wall_friction": 0.14})
         racer.env.record = False
-        racer.env.kart = ArcadeKart(self.legacy)
+        racer.env.kart = ArcadeKart(self.legacy, self.previous)
         player = Player(pid, f"Spieler {self.counter}", COLORS[(self.counter - 1) % len(COLORS)], racer)
+        if racer.env.kart.modern:
+            player.keyboard = KeyboardDriver(3.0, 6.4, 18)
         player.reset()
         player.waiting = self.phase in ("countdown", "racing")
         player.bot = player.ready = bot
@@ -289,8 +317,8 @@ class RaceRoom:
         for index, player in enumerate(order):
             player.reset()
             env = player.racer.env
-            # Roggwil: 22 m straight after the stripe. Pairs sit 3.8 m apart lengthwise.
-            grid = 12 - 3.8 * (index // 2) - 0.85 * (index % 2)
+            # Signed distance upstream of the start gantry.
+            grid = -8 - 3.8 * (index // 2) - 0.85 * (index % 2)
             lateral = 1.55 if index % 2 == 0 else -1.55
             x, y, yaw = env.track.start_pose(grid, lateral)
             self.grid.append(
@@ -298,7 +326,8 @@ class RaceRoom:
             )
             env.kart.reset(x, y, yaw, 0)
             env.s, env.lateral, env.idx = env.track.localize(x, y)
-            env.total_progress = env.max_progress = env.s
+            env.total_progress = env.max_progress = env.s - env.track.length
+            player.next_gate = 0
             player.racer.obs = env._observe()
         self.phase, self.elapsed, self.countdown = "countdown", 0.0, 7.0
         self.race_id, self.saved = uuid.uuid4().hex[:12], False

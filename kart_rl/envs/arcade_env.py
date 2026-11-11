@@ -26,8 +26,8 @@ def observation(player):
 
 
 class ArcadeEnv(gym.Env):
-    def __init__(self, laps=3, *, legacy=False):
-        self.room = RaceRoom(laps, legacy=legacy)
+    def __init__(self, laps=3, *, legacy=False, previous=False):
+        self.room = RaceRoom(laps, legacy=legacy, previous=previous)
         self.player = self.room.join()
         self.observation_space = spaces.Box(-10, 10, shape=observation(self.player).shape, dtype=np.float32)
         self.action_space = spaces.Box(-1, 1, shape=(4,), dtype=np.float32)
@@ -81,7 +81,7 @@ def load_arcade_policy(path):
         or metadata.get("action_space", {}).get("_shape") != [4]
     ):
         raise ValueError(
-            "Inkompatibles Modell: KartArcade-v1 mit 38 Beobachtungen und 4 Aktionen erforderlich."
+            "Inkompatibles Modell: KartArcade-v2 mit 38 Beobachtungen und 4 Aktionen erforderlich."
         )
     from stable_baselines3 import PPO
 

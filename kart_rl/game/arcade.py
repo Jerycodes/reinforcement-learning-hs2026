@@ -50,7 +50,7 @@ class RoomService:
                         "player_id": player.id,
                         "host_id": room.host_id,
                         "driver": player.name,
-                        "track": "race_inn_roggwil",
+                        "track": "roggwil_arcade",
                         "policy": "Arcade",
                         "policies": [],
                         "schema": [],

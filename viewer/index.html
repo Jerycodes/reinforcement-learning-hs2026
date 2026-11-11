@@ -87,7 +87,7 @@
   <h3>Kamera</h3>
   <div class="row">
     <button data-cam="chase" class="cam active">Verfolger</button>
-    <button data-cam="onboard" class="cam">Onboard</button>
+    <button data-cam="onboard" class="cam">Fahrersicht</button>
     <button data-cam="top" class="cam">Draufsicht</button>
     <button data-cam="free" class="cam">Frei</button>
   </div>
@@ -110,6 +110,7 @@
 
 <script type="module">
 import * as THREE from 'three';
+import {startBoxes,gantryLights} from './start-grid.js';
 import {createPaddock} from './paddock.js';
 import {paddockKart} from './paddock-model.js';
 const club=document.documentElement.classList.contains('club');
@@ -120,7 +121,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 // ------------------------------------------------------------------ helpers
 const $ = id => document.getElementById(id);
 const escapeHtml = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const TRACK_URL = '../kart_rl/data/race_inn_roggwil.json';
+const TRACK_URL = club ? '../kart_rl/data/roggwil_arcade.json' : '../kart_rl/data/race_inn_roggwil.json';
 const RACELINE_URL = '../kart_rl/data/race_inn_roggwil_raceline.json';
 const DEFAULT_REPLAYS = ['../replays/agent.json', '../replays/baseline_raceline.json'];
 const COLORS = [0xff5a36, 0x3fd0ff, 0xffb000, 0x7cff6b, 0xd36bff, 0xffffff];
@@ -173,6 +174,7 @@ window.addEventListener('resize', resize);
 resize();
 
 // ------------------------------------------------------------------ track
+let startField, gridRace, lightState, finishStripe;
 let track = null, raceline = null, center = null;
 const overlays = {};
 let bounds = { cx: 70, cz: -55, size: 140 };
@@ -249,7 +251,9 @@ function buildTrack(t) {
   sf.rotation.z = Math.atan2(r[1] - l[1], r[0] - l[0]);
   sf.position.set((l[0] + r[0]) / 2, 0.01, -(l[1] + r[1]) / 2);
   scene.add(sf);
+  finishStripe=sf;
   if(club){
+    lightState=gantryLights(scene,l,r);
     const beam=new THREE.MeshStandardMaterial({color:0x203538});
     function post(x,y,z,w,h,d,mat) {
       const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
@@ -416,6 +420,9 @@ let camMode = 'chase';
 const camPos = new THREE.Vector3(), camLook = new THREE.Vector3();
 function setCamera(m) {
   camMode = m;
+  document.body.classList.toggle("driver-camera",club && m==="onboard");
+  camera.fov=club && m==='onboard' ? 54 : 60;
+  camera.updateProjectionMatrix();
   document.querySelectorAll('.cam').forEach(b => b.classList.toggle('active', b.dataset.cam === m));
   controls.enabled = (m === 'free');
   if (m === 'top') { camera.position.set(bounds.cx, bounds.size * 1.05, bounds.cz + 1); camera.lookAt(bounds.cx, 0, bounds.cz); }
@@ -426,13 +433,25 @@ document.querySelectorAll('.cam').forEach(b => b.addEventListener('click', () =>
 function updateCamera(k, st, dt) {
   if (!st) return;
   const p = W(st.x, st.y), fwd = new THREE.Vector3(Math.cos(st.yaw), 0, -Math.sin(st.yaw));
-  if (camMode === 'chase') {
+  if (camMode === 'top') {
+    camera.position.set(bounds.cx, bounds.size * 1.05, bounds.cz + 1);
+    camera.lookAt(bounds.cx, 0, bounds.cz);
+  } else if (camMode === 'chase') {
     camPos.copy(p).addScaledVector(fwd, -9).add(new THREE.Vector3(0, 4, 0));
     camLook.copy(p).addScaledVector(fwd, 6).add(new THREE.Vector3(0, 0.8, 0));
     const a = 1 - Math.exp(-dt * 4);
     camera.position.lerp(camPos, a);
     camera.lookAt(camLook);
   } else if (camMode === 'onboard') {
+    if(club){
+      // Rigid eye inside the driver's safe body footprint; only the kart model leans.
+      camera.position.copy(p).addScaledVector(fwd,-.35);
+      camera.position.y=.72;
+      camLook.copy(camera.position).addScaledVector(fwd,8);
+      camLook.y-=1.02;
+      camera.lookAt(camLook);
+      return;
+    }
     camera.position.copy(p).addScaledVector(fwd, -0.2).add(new THREE.Vector3(0, 1.0, 0));
     camLook.copy(p).addScaledVector(fwd, 10).add(new THREE.Vector3(0, 0.5, 0));
     camera.lookAt(camLook);
@@ -503,6 +522,15 @@ function frame(dt) {
   }
   if (game) { const own = liveKarts[game.player_id || 'du']; if (own) hudIndex = karts.indexOf(own); }
   let hudState = null, hudK = karts[hudIndex] || karts[0];
+  const formation = game?.phase==='countdown' && game.countdown>3 && game.grid.length;
+  if(club && game?.grid?.length && gridRace!==game.race_id){
+    // Use the same snapshot as the authoritative line-up, including on a rematch.
+    if(startField){scene.remove(startField);startField.traverse(m=>{
+      m.geometry?.dispose();if(m.material?.map){m.material.map.dispose();m.material.dispose();}
+    });}
+    startField=startBoxes(game.grid);scene.add(startField);gridRace=game.race_id;
+  }
+  if(game?.arcade)lightState?.(game.phase,game.countdown,game.elapsed);
   for (const k of karts) {
     const st = (mode === 'live' || mode === 'game') ? (k.traj.t.length ?
       (game?.arcade ? sample(k.traj, k.traj.t.at(-1) - .05 + Math.max(0, performance.now() - (k.receivedAt || performance.now())) / 1000) : at(k.traj, k.traj.t.length - 1)) : null) : sample(k.traj, tCursor);
@@ -510,6 +538,9 @@ function frame(dt) {
     k.group.visible = !game?.arcade || k === hudK || !st.parked;
     k.group.position.copy(W(st.x, st.y));
     k.group.rotation.y = st.yaw;
+    const cockpit=club && !formation && k===hudK && camMode==='onboard';
+    for(const part of k.group.userData.driverParts || [])part.visible=!cockpit;
+    if(k.group.userData.rim)k.group.userData.rim.rotation.z=-(st.steer || 0)*1.4;
     if (k.group.userData.frontWheels) for (const w of k.group.userData.frontWheels) w.rotation.y = st.steer || 0;
     if (k.group.userData.steeringWheel) k.group.userData.steeringWheel.rotation.x = -(st.steer || 0) * 2.5;
     k.trail.visible = $('showTrail').checked;
@@ -524,10 +555,10 @@ function frame(dt) {
     if (game?.arcade) k.group.rotation.x = -(st.steer || 0) * Math.min(Math.abs(st.vx) / 8, 1) * .12;
     if (k === hudK) hudState = st;
   }
-  if (game?.phase==='countdown' && game.countdown>3 && game.grid.length) {
+  if (formation) {
     const pole=game.grid[0], c=Math.cos(pole.yaw), d=Math.sin(pole.yaw);
-    camera.position.set(pole.x+5*c-4*d,5.5,-pole.y-5*d-4*c);
-    camera.lookAt(pole.x-3*c,0,-pole.y+3*d);
+    camera.position.set(pole.x-15*c-7*d,9,-pole.y+15*d-7*c);
+    camera.lookAt(pole.x,0,-pole.y);
   } else if (hudK && hudState) updateCamera(hudK, hudState, dt);
   hud(hudK, hudState);
   if (mode === 'replay') { $('time').textContent = `${tCursor.toFixed(1)} s`; if (!scrubbing) $('scrub').value = Math.round(tCursor * 10); }
@@ -646,6 +677,10 @@ function liveKartFor(id, name, color, appearance) {
 function pushState(k, st) {
   k.receivedAt = performance.now();
   const tr = k.traj;
+  if(game?.arcade && tr.t.length && Math.hypot(st.x-tr.x.at(-1),st.y-tr.y.at(-1))>3){
+    for(const values of Object.values(tr))values.length=0;
+    k.trailN=0;
+  }
   const n = tr.t.length;
   // Idle lobby and start-grid packets share t=0. Replace the old pose so
   // interpolation cannot show the lobby position until the first driving tick.
@@ -695,7 +730,7 @@ function handleLive(m) {
       if (!$('driverName').value) $('driverName').value = m.driver !== 'du' ? m.driver : stored;
       if (m.driver === 'du' && stored) { send({ type: 'set_name', name: stored }); game.driver = stored; }
 
-      status(m.arcade ? 'Arcade-Lobby verbunden – jedes Browserfenster steuert ein eigenes Kart' : `Spiel gegen ${m.policy.split('/').slice(-2, -1)[0] || m.policy} – Pfeiltasten/WASD fahren, R = Neustart`); setCamera('chase');
+      status(m.arcade ? 'Arcade-Lobby verbunden – jedes Browserfenster steuert ein eigenes Kart' : `Spiel gegen ${m.policy.split('/').slice(-2, -1)[0] || m.policy} – Pfeiltasten/WASD fahren, R = Neustart`); setCamera(m.arcade?'onboard':'chase');
     }
     else if (isTraining) { newLiveKart('aktueller Trainingsstand'); status(`Training: ${m.policy}`); setCamera('chase'); }
     else { newLiveKart(m.policy || 'live'); status(`Server: ${m.track}, Policy ${m.policy}`); }
@@ -826,6 +861,11 @@ window.kartViewer = {
   loadReplay(url) { return loadReplayUrl(url); },
   connect(url) { $('wsUrl').value = url; if (!ws) $('connect').click(); },
   karts() { return karts.map(k => ({ name: k.name, steps: k.traj.t.length, x:k.group.position.x, y:-k.group.position.z, lapTimes: k.lapTimes })); },
+  gridView() {return {
+    camera:camMode, eye:camera.position.toArray(), fov:camera.fov,
+    boxes:startField?.children.map(b=>[b.userData.position,b.position.x,-b.position.z,b.rotation.y]),
+    finish:[finishStripe.position.x,-finishStripe.position.z]
+  };},
   gameState() { return game ? structuredClone(game) : null; },
   maxTime,
 };
@@ -837,7 +877,7 @@ window.kartViewer = {
     buildTrack(t);
     try {
       const rl = await (await fetch(RACELINE_URL)).json();
-      overlays.raceline = polyline(rl.points, 0x3fd0ff, true, 0.04);
+      overlays.raceline = polyline(club ? rl.points.map(([x,y])=>[x*t.world_scale,y*t.world_scale]) : rl.points, 0x3fd0ff, true, 0.04);
       overlays.raceline.visible = $('showRaceline').checked;
       scene.add(overlays.raceline);
     } catch (e) { /* no raceline file */ }
