@@ -2,6 +2,7 @@
 
 import csv
 import math
+import random
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -13,6 +14,8 @@ from ..kart import Kart, KartParams
 from .driver import GAME_ENV, KeyboardDriver, Racer
 
 ROOT = Path(__file__).resolve().parents[2]
+
+AVATARS = ("Fuchs", "Panda", "Luchs", "Drache")
 
 COLORS = [0xFF5A36, 0x3FD0FF, 0xFFB000, 0x7CFF6B, 0xD36BFF, 0xFF7FBB, 0xFFFFFF, 0x41E4CB]
 
@@ -82,6 +85,7 @@ class Player:
     waiting: bool = False
     ready: bool = False
     bot: bool = False
+    avatar: str = "Fuchs"
 
     def release(self):
         self.keyboard.release()
@@ -137,6 +141,9 @@ class Player:
             **self.racer.state(self.id),
             "name": self.name,
             "color": self.color,
+            "avatar": self.avatar,
+            "car": self.racer.env.kart.car,
+            "tyre": self.racer.env.kart.tyre,
             "lap": len(self.laps),
             "boost": self.racer.env.kart.boosting,
             "drifting": self.racer.env.kart.drifting,
@@ -158,6 +165,7 @@ class Player:
             "waiting": self.waiting,
             "ready": self.ready,
             "bot": self.bot,
+            "avatar": self.avatar,
             "car": self.racer.env.kart.car,
             "tyre": self.racer.env.kart.tyre,
         }
@@ -173,13 +181,33 @@ class RaceRoom:
         self.dt = 1 / 30
         self.race_id, self.saved = "", False
         self.contacts = set()
+        self.grid = []
         self.departed = []
         self.results = []
         self.results_path = Path(results_path) if results_path else ROOT / "runs/arcade/races.csv"
 
-    def join(self, bot=False):
+    def join(self, bot=False, profile=None):
         if len(self.players) >= self.max_players:
             raise ValueError("Die Lobby ist voll (kein freier Startplatz).")
+        if profile is not None:
+            if not isinstance(profile, dict):
+                raise ValueError("Fahrerprofil fehlt.")
+            name = profile.get("name")
+            if (
+                not isinstance(name, str)
+                or not name.strip()
+                or len(name) > 24
+                or not all(c.isalnum() or c in " _-" for c in name)
+            ):
+                raise ValueError("Name: 1–24 Buchstaben, Ziffern, Leerzeichen, - oder _.")
+            if any(p.name.casefold() == name.strip().casefold() for p in self.players.values()):
+                raise ValueError("Dieser Fahrername ist schon vergeben.")
+            if (
+                profile.get("avatar") not in AVATARS
+                or profile.get("car") not in tuple(CARS)
+                or profile.get("tyre") not in tuple(TYRES)
+            ):
+                raise ValueError("Unbekannte Auswahl.")
         self.counter += 1
         pid = f"p{self.counter}"
         racer = Racer(pid, {**GAME_ENV, "dt": self.dt, "wall_friction": 0.14})
@@ -189,7 +217,12 @@ class RaceRoom:
         player.reset()
         player.waiting = self.phase in ("countdown", "racing")
         player.bot = player.ready = bot
+        if profile:
+            player.name = profile["name"].strip()
+            player.avatar = profile["avatar"]
+            racer.env.kart.configure(profile["car"], profile["tyre"])
         if bot:
+            player.avatar = random.choice(AVATARS)
             player.name = f"Bot {self.counter}"
         while any(p.name.casefold() == player.name.casefold() for p in self.players.values()):
             player.name += "_"
@@ -222,16 +255,24 @@ class RaceRoom:
         self.contacts.clear()
         self.departed.clear()
         self.results.clear()
-        for index, player in enumerate(self.players.values()):
+        order = list(self.players.values())
+        random.shuffle(order)
+        self.grid = []
+        for index, player in enumerate(order):
             player.reset()
             env = player.racer.env
-            grid = -2.8 * index
-            x, y, yaw = env.track.start_pose(grid)
+            # Roggwil: 22 m straight after the stripe. Pairs sit 3.8 m apart lengthwise.
+            grid = 12 - 3.8 * (index // 2) - 0.85 * (index % 2)
+            lateral = 1.55 if index % 2 == 0 else -1.55
+            x, y, yaw = env.track.start_pose(grid, lateral)
+            self.grid.append(
+                {"position": index + 1, "id": player.id, "name": player.name, "x": x, "y": y, "yaw": yaw}
+            )
             env.kart.reset(x, y, yaw, 0)
             env.s, env.lateral, env.idx = env.track.localize(x, y)
-            env.total_progress = grid
+            env.total_progress = env.max_progress = env.s
             player.racer.obs = env._observe()
-        self.phase, self.elapsed, self.countdown = "countdown", 0.0, 3.0
+        self.phase, self.elapsed, self.countdown = "countdown", 0.0, 7.0
         self.race_id, self.saved = uuid.uuid4().hex[:12], False
         return True
 
@@ -349,10 +390,12 @@ class RaceRoom:
         board = self.ranked([p.hud() for p in self.players.values()])
         return {
             "type": "states",
-            "states": [p.state() for p in self.players.values()],
+            "states": [p.state() for p in self.players.values() if not p.waiting],
             "game": {
                 "arcade": True,
                 "phase": self.phase,
+                "race_id": self.race_id,
+                "grid": self.grid,
                 "host_id": self.host_id,
                 "countdown": round(self.countdown, 2),
                 "elapsed": round(self.elapsed, 2),

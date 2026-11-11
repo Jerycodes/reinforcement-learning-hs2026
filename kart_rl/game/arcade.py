@@ -39,7 +39,7 @@ class RoomService:
                 room = self.rooms.get(token) if isinstance(token, str) else None
             if room is None:
                 raise ValueError("Rennraum unbekannt oder bereits geschlossen.")
-            player = room.join()
+            player = room.join(profile=request.get("profile"))
             await ws.send(
                 json.dumps(
                     {
@@ -73,10 +73,10 @@ class RoomService:
             self.clients.pop(ws, None)
             if player:
                 room.leave(player.id)
-                if room.host_id is None:
-                    for pid in list(room.players):
-                        room.leave(pid)
-                    self.rooms.pop(token, None)
+            if room is not None and room.host_id is None:
+                for pid in list(room.players):
+                    room.leave(pid)
+                self.rooms.pop(token, None)
 
     async def run(self):
         import websockets

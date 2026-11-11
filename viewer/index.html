@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kart-RL 3D-Viewer</title>
+<link rel="stylesheet" href="./paddock.css">
+<script>if(new URLSearchParams(location.search).has("arcade"))document.documentElement.classList.add("club");</script>
 <style>
   :root { --bg:#0e1014; --panel:#161a21; --line:#2a303b; --fg:#e8eaf0; --muted:#8b93a3; --acc:#ff5a36; --ok:#3fd0ff; }
   html, body { margin:0; height:100%; background:var(--bg); color:var(--fg); font:13px/1.4 -apple-system, "Segoe UI", Roboto, sans-serif; overflow:hidden; }
@@ -29,18 +31,7 @@
   #status { color:var(--muted); font-size:12px; min-height:16px; }
   .small { color:var(--muted); font-size:11px; }
   a { color:var(--ok); }
-  #arcadeBanner { position:absolute;top:24px;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none;font-size:36px;font-weight:900;text-shadow:0 3px 20px #000; }
-  #arcadeBanner small { display:block;font-size:13px;font-weight:500;color:#c6d9ec; }
-  .arcade #hud { border-color:#3fd0ff55; background:#07111de0; border-radius:14px; }
-  .arcade-speed { font-size:40px;font-weight:900;line-height:1.15;color:#3fd0ff;margin:5px 0; }
-  .arcade-speed small { font-size:13px;color:#b5c4d8; }
-  .arcade #panel { background:#0c1728ed;border-color:#3fd0ff33; }
-  #arcadeBox { padding:12px;background:#3fd0ff0a;border:1px solid #3fd0ff40;border-radius:12px;margin:10px 0; }
-  #arcadeStart { background:#3fd0ff;color:#081322;font-weight:800;padding:10px 14px; }
   button:disabled { opacity:.4;cursor:default; }
-  .arcade-energy { height:9px;border-radius:9px;background:#243349;overflow:hidden;margin:5px 0; }
-  .arcade-energy span { display:block;height:100%;background:linear-gradient(90deg,#3fd0ff,#a17bff); }
-  @media(max-width:700px) { .arcade #panel { width:270px; } .arcade #hud { min-width:0;font-size:10px;max-width:65vw; } #arcadeBanner { top:120px;font-size:26px; } }
 </style>
 <script type="importmap">
 { "imports": { "three": "./vendor/three.module.js",
@@ -51,7 +42,6 @@
 <div id="scene"></div>
 <div id="hud">lade Strecke …</div>
 <div id="legend"></div>
-<div id="arcadeBanner" style="display:none"></div>
 <div id="panel">
   <div class="row"><b id="viewerTitle" style="font-size:14px">Kart-RL 3D-Viewer</b></div>
   <div id="status"></div>
@@ -81,20 +71,6 @@
       <div class="row"><label>Name</label><input type="text" id="driverName" placeholder="dein Name" style="flex:1"><button id="setName">ok</button></div>
       <div class="row" id="ghostRow"><label>Gegner</label><select id="ghostPolicy" style="flex:1"></select></div>
       <div class="row" id="classicResetRow"><button id="gameReset">Neustart (R)</button></div>
-      <div id="arcadeBox" style="display:none">
-        <b style="color:#3fd0ff">ARCADE · MULTIPLAYER</b>
-        <p class="small">Direkte Lenkung · Pfeiltasten / WASD fahren<br><b>Shift</b> driften · <b>Leertaste</b> Boost<br><b>R / Backspace</b> zurück auf die Strecke (+3 s)</p>
-        <div id="garage">
-          <label>Kart <select id="car"><option>Club</option><option>Sprint</option><option>GT</option></select></label>
-          <label>Reifen <select id="tyre"><option>Standard</option><option>Grip</option><option>Speed</option></select></label>
-          <p id="specs" class="small"></p>
-          <div class="row"><button id="ready">Bereit</button><button id="addBot">+ Bot</button><button id="removeBot">− Bot</button></div>
-        </div>
-        <div class="row"><button id="arcadeStart">Rennen starten</button><button id="arcadeInvite">Einladungslink kopieren</button></div>
-        <div id="arcadeInfo" class="small"></div>
-        <div class="arcade-energy"><span id="arcadeEnergy" style="width:100%"></span></div>
-        <div class="small">Boost lädt sich wieder auf. Einen Drift mindestens 0,7 s halten und loslassen für Mini-Boost. Kartkontakt kostet Tempo.</div>
-      </div>
       <div id="gameLaps" class="small"></div>
     </div>
     <div id="serverControls">
@@ -134,6 +110,10 @@
 
 <script type="module">
 import * as THREE from 'three';
+import {createPaddock} from './paddock.js';
+import {paddockKart} from './paddock-model.js';
+const club=document.documentElement.classList.contains('club');
+let paddock;
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
@@ -178,7 +158,7 @@ controls.enableDamping = true;
 controls.enabled = false;
 
 scene.add(new THREE.HemisphereLight(0xdfe7ff, 0x30343c, 1.1));
-const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+const sun = new THREE.DirectionalLight(club ? 0xffe2b0 : 0xffffff, 2.2);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
 scene.add(sun);
@@ -213,7 +193,7 @@ function ribbon(left, right, color, closed, y = 0) {
 
 function wall(points, closed, h = 0.45) {
   const n = points.length, pos = [], col = [], idx = [];
-  const red = new THREE.Color(0xd12c2c), white = new THREE.Color(0xf2f2f2);
+  const red = new THREE.Color(club ? 0xd85d34 : 0xd12c2c), white = new THREE.Color(0xf2f2f2);
   for (let i = 0; i < n; i++) {
     const c = (Math.floor(i / 3) % 2) ? red : white;
     pos.push(points[i][0], 0, -points[i][1], points[i][0], h, -points[i][1]);
@@ -251,13 +231,13 @@ function buildTrack(t) {
   const x0 = Math.min(...x), x1 = Math.max(...x), y0 = Math.min(...y), y1 = Math.max(...y);
   bounds = { cx: (x0 + x1) / 2, cz: -(y0 + y1) / 2, size: Math.max(x1 - x0, y1 - y0) + 20 };
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(bounds.size * 3, bounds.size * 3),
-    new THREE.MeshStandardMaterial({ color: 0x3a3f48, roughness: 1 }));
+    new THREE.MeshStandardMaterial({ color: club ? 0x32715c : 0x3a3f48, roughness: 1 }));
   floor.rotation.x = -Math.PI / 2; floor.position.set(bounds.cx, -0.02, bounds.cz); floor.receiveShadow = true;
   scene.add(floor);
   const grid = new THREE.GridHelper(bounds.size * 2, 40, 0x4a505b, 0x4a505b);
-  grid.position.set(bounds.cx, -0.015, bounds.cz); scene.add(grid);
+  grid.position.set(bounds.cx, -0.015, bounds.cz); if(!club) scene.add(grid);
 
-  scene.add(ribbon(t.left_edge, t.right_edge, 0x6a6f78, true));
+  scene.add(ribbon(t.left_edge, t.right_edge, club ? 0x424d5c : 0x6a6f78, true));
   scene.add(ribbon(t.pit_lane.left_edge, t.pit_lane.right_edge, 0x474a52, false, -0.005));
   scene.add(wall(t.left_edge, true));
   scene.add(wall(t.right_edge, true));
@@ -266,9 +246,32 @@ function buildTrack(t) {
   const len = Math.hypot(r[0] - l[0], r[1] - l[1]);
   const sf = new THREE.Mesh(new THREE.PlaneGeometry(len, 0.8), new THREE.MeshBasicMaterial({ map: checkerTexture() }));
   sf.rotation.x = -Math.PI / 2;
-  sf.rotation.z = -Math.atan2(r[1] - l[1], r[0] - l[0]);
+  sf.rotation.z = Math.atan2(r[1] - l[1], r[0] - l[0]);
   sf.position.set((l[0] + r[0]) / 2, 0.01, -(l[1] + r[1]) / 2);
   scene.add(sf);
+  if(club){
+    const beam=new THREE.MeshStandardMaterial({color:0x203538});
+    function post(x,y,z,w,h,d,mat) {
+      const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+      m.position.set(x,y,z); m.castShadow=true; scene.add(m); return m;
+    }
+    for(const edge of [l,r])post(edge[0],1.85,-edge[1],.22,3.7,.22,beam);
+    const gantry=post(sf.position.x,3.7,sf.position.z,len+.25,.46,.35,beam);
+    gantry.rotation.y=Math.atan2(r[1]-l[1],r[0]-l[0]);
+    const flag=post(sf.position.x,3.7,sf.position.z,len*.84,.25,.37,new THREE.MeshBasicMaterial({map:checkerTexture()}));
+    flag.rotation.y=gantry.rotation.y;
+    const seats=new THREE.MeshStandardMaterial({color:0x218882});
+    const canopy=new THREE.MeshStandardMaterial({color:0xff955a});
+    // The stands sit outside the full track boundary, including the pit lane.
+    const back=Math.max(...t.left_edge.map(p=>p[1]), ...t.right_edge.map(p=>p[1]),
+                        ...t.pit_lane.left_edge.map(p=>p[1]), ...t.pit_lane.right_edge.map(p=>p[1]))+5;
+    for(let i=-2;i<=2;i++){
+      const x=bounds.cx+i*12;
+      for(let row=0;row<4;row++)post(x,.26+row*.38,-back-row*.85,11,.45,1,seats);
+      for(const offset of [-4.8,4.8])post(x+offset,2.15,-back-3,.15,4.3,.15,beam);
+      post(x,4.3,-back-1.6,11.5,.2,4.6,canopy);
+    }
+  }
   // overlays
   overlays.center = polyline(t.centerline, 0x8a8f99, true, 0.03);
   overlays.center.visible = $('showCenter').checked;
@@ -277,7 +280,7 @@ function buildTrack(t) {
   for (let i = 0; i < t.centerline.length; i += 100) {
     const c = t.centerline[i], l = t.left_edge[i];
     const d = Math.hypot(l[0] - c[0], l[1] - c[1]) || 1;
-    scene.add(label(`${i} m`, [l[0] + (l[0] - c[0]) / d * 1.5, l[1] + (l[1] - c[1]) / d * 1.5], 0.35));
+    if(!club) scene.add(label(`${i} m`, [l[0] + (l[0] - c[0]) / d * 1.5, l[1] + (l[1] - c[1]) / d * 1.5], 0.35));
   }
   // sun / shadow camera covering the track
   scene.children.filter(o => o.geometry && o.geometry.type === 'SphereGeometry' && o.material.side === THREE.BackSide)
@@ -300,7 +303,7 @@ function label(text, p, scale = 1) {
 
 // ------------------------------------------------------------------ kart model
 let gltfKart = null;
-new GLTFLoader().load('assets/kart.glb', g => { gltfKart = g.scene; }, undefined, () => {});
+if(!club) new GLTFLoader().load('assets/kart.glb', g => { gltfKart = g.scene; }, undefined, () => {});
 
 function makeKart(color) {
   const g = new THREE.Group();
@@ -336,7 +339,7 @@ let hudIndex = 0;
 
 function addKart(name, traj, meta = {}) {
   const color = typeof meta.color === 'number' ? meta.color : COLORS[karts.length % COLORS.length];
-  const group = makeKart(color);
+  const group = meta.avatar ? paddockKart(meta.car,meta.tyre,meta.avatar) : makeKart(color);
   scene.add(group);
   const n = traj.t.length;
   const g = new THREE.BufferGeometry();
@@ -444,10 +447,7 @@ function hud(k, st) {
   if (game?.arcade) {
     const own = game.players?.find(p => p.id === game.player_id);
     if (!own) return;
-    $('hud').innerHTML = `<b>${escapeHtml(k.name)}</b><div class="arcade-speed">${Math.round(v)} <small>km/h</small></div>` +
-      `<div>PLATZ ${own.rank}/${game.players.length} · RUNDE ${Math.min(own.lap + 1, game.race_laps)}/${game.race_laps}</div>` +
-      `<div>Boost ${Math.round(own.energy)} %${st.boost ? ' · TURBO!' : ''} · Drift ${Math.round(own.drift_charge * 100)} %</div>` +
-      `<small>Rennzeit ${fmt(game.elapsed, 1)} s${own.penalty ? ` · Strafe +${own.penalty.toFixed(0)} s` : ''}</small>`;
+    $('hud').innerHTML = `P${own.rank}/${game.grid.length}　·　Runde ${Math.min(own.lap+1,game.race_laps)}/${game.race_laps}<br><strong>${Math.round(v)}</strong> km/h　 <small>${game.elapsed.toFixed(1)} s</small><br>Boost <meter min="0" max="100" value="${own.energy}"></meter> ${Math.round(own.energy)} % ${st.boost?'⚡ Turbo':st.drifting?'↝ Drift':''}`;
     return;
   }
   const lap = (st.lap ?? 0) + 1;
@@ -497,6 +497,7 @@ function animate() {
 }
 const renderOnce = () => frame(1 / 60);
 function frame(dt) {
+  if(club && !document.body.classList.contains("on-track")) return;
   if (mode === 'replay') {
     if (playing && karts.length) { tCursor += dt * playSpeed; if (tCursor > maxTime()) tCursor = 0; }
   }
@@ -518,10 +519,15 @@ function frame(dt) {
     }
     if (k.group.userData.offMarker) k.group.userData.offMarker.visible = !!st.off_track;
     if (k.group.userData.boostFlame) k.group.userData.boostFlame.visible = !!st.boost;
+    if (k.group.userData.sparks) k.group.userData.sparks.visible = !!st.drifting;
     if (game?.arcade) k.group.rotation.x = -(st.steer || 0) * Math.min(Math.abs(st.vx) / 8, 1) * .12;
     if (k === hudK) hudState = st;
   }
-  if (hudK && hudState) updateCamera(hudK, hudState, dt);
+  if (game?.phase==='countdown' && game.countdown>3 && game.grid.length) {
+    const pole=game.grid[0], c=Math.cos(pole.yaw), d=Math.sin(pole.yaw);
+    camera.position.set(pole.x+5*c-4*d,5.5,-pole.y-5*d-4*c);
+    camera.lookAt(pole.x-3*c,0,-pole.y+3*d);
+  } else if (hudK && hudState) updateCamera(hudK, hudState, dt);
   hud(hudK, hudState);
   if (mode === 'replay') { $('time').textContent = `${tCursor.toFixed(1)} s`; if (!scrubbing) $('scrub').value = Math.round(tCursor * 10); }
   if (lidarLines) lidarLines.visible = $('showLidar').checked && mode === 'live';
@@ -551,7 +557,7 @@ $('modeReplay').addEventListener('click', () => setMode('replay'));
 $('modeLive').addEventListener('click', () => setMode('live'));
 $('modeGame').addEventListener('click', () => setMode('game'));
 function setMode(m) {
-  if (m !== 'game') { game = null; document.body.classList.remove('arcade'); $('arcadeBanner').style.display = 'none'; }
+  if (m !== 'game') { game = null; document.body.classList.remove('arcade'); }
   if (m === 'live' || m === 'game') { for (const k of [...karts]) if (!Object.values(liveKarts).includes(k)) { scene.remove(k.group); scene.remove(k.trail); karts.splice(karts.indexOf(k), 1); } refreshKartList(); }
   if (m === 'replay') { clearLive(); training = null; game = null; }
   mode = m;
@@ -593,7 +599,7 @@ function connectLive() {
   ws.onopen = () => {
     if (new URLSearchParams(location.search).has('arcade')) {
       const room = new URLSearchParams(location.search).get('room');
-      send(room ? {type:'join',room} : {type:'create'});
+      send({type:room?'join':'create',room,profile:paddock.profile});
     }
     opened = true; retryUntil = 0; status('verbunden'); $('connect').textContent = 'trennen'; };
   ws.onclose = () => {
@@ -601,7 +607,7 @@ function connectLive() {
     if (!opened && Date.now() < retryUntil) {
       status(`Server startet noch – verbinde erneut … (${Math.ceil((retryUntil - Date.now()) / 1000)} s)`);
       retryTimer = setTimeout(connectLive, 2000);
-    } else status(serverError || (opened ? 'Verbindung getrennt' : 'Verbindung fehlgeschlagen – läuft der Server? (Dashboard: Log des Laufs prüfen)'));
+    } else { if(paddock) {document.body.classList.remove('on-track'); paddock.closed(serverError || 'Verbindung getrennt.');} status(serverError || (opened ? 'Verbindung getrennt' : 'Verbindung fehlgeschlagen – läuft der Server? (Dashboard: Log des Laufs prüfen)')); }
   };
   ws.onerror = () => {};
   ws.onmessage = ev => handleLive(JSON.parse(ev.data));
@@ -625,10 +631,10 @@ function clearLive() {
   liveKart = null;
   refreshKartList();
 }
-function liveKartFor(id, name, color) {
+function liveKartFor(id, name, color, appearance) {
   if (liveKarts[id]) { if (liveKarts[id].name !== name) { liveKarts[id].name = name; refreshKartList(); } return liveKarts[id]; }
   const traj = { t: [], x: [], y: [], yaw: [], vx: [], vy: [], steer: [], throttle: [], s: [], lap: [] };
-  const k = addKart(name || `Kart ${id}`, traj, {color});
+  const k = addKart(name || `Kart ${id}`, traj, {color,...appearance});
   k.lapStarts = [0];
   const marker = new THREE.Mesh(new THREE.SphereGeometry(0.35, 12, 8), new THREE.MeshBasicMaterial({ color: 0xff2020 }));
   marker.position.y = 1.4; marker.visible = false; k.group.add(marker); k.group.userData.offMarker = marker;
@@ -640,6 +646,12 @@ function pushState(k, st) {
   k.receivedAt = performance.now();
   const tr = k.traj;
   const n = tr.t.length;
+  // Idle lobby and start-grid packets share t=0. Replace the old pose so
+  // interpolation cannot show the lobby position until the first driving tick.
+  if (game?.arcade && n && st.t === tr.t[n - 1]) {
+    for (const values of Object.values(tr)) values.pop();
+    k.trailN = Math.min(k.trailN, n - 1);
+  }
   if (n && st.t < tr.t[n - 1]) {            // new episode: start a fresh trace
     for (const key of Object.keys(tr)) tr[key].length = 0;
     k.trailN = 0; k.lapStarts = [0]; k.lapTimes = [];
@@ -669,11 +681,11 @@ function handleLive(m) {
         game.invite_url = url.href;
       }
       document.body.classList.toggle('arcade', !!m.arcade);
-      $('viewerTitle').textContent = m.arcade ? 'ARCADE KART · MULTIPLAYER' : 'Kart-RL 3D-Viewer';
+      $('viewerTitle').textContent = m.arcade ? 'Entwickler / Analyse' : 'Kart-RL 3D-Viewer';
       document.title = m.arcade ? 'Arcade Kart · Multiplayer' : 'Kart-RL 3D-Viewer';
       for (const id of ['modeHeading', 'modeSelector', 'connectionHeading', 'connectionRow', 'hudKartRow']) $(id).style.display = m.arcade ? 'none' : '';
       $('cameraHint').textContent = m.arcade ? '1–4 = Kamera · Shift = Drift · Leertaste = Boost' : 'Tasten 1–4 wechseln die Kamera, Leertaste = Play/Pause';
-      $('arcadeBox').style.display = m.arcade ? '' : 'none';
+
       $('classicGameHelp').style.display = m.arcade ? 'none' : '';
       $('ghostRow').style.display = m.arcade ? 'none' : '';
       $('classicResetRow').style.display = m.arcade ? 'none' : '';
@@ -681,7 +693,7 @@ function handleLive(m) {
       let stored = ''; try { stored = localStorage.getItem('driverName') || ''; } catch (e) {}
       if (!$('driverName').value) $('driverName').value = m.driver !== 'du' ? m.driver : stored;
       if (m.driver === 'du' && stored) { send({ type: 'set_name', name: stored }); game.driver = stored; }
-      if (m.arcade && stored) { $('driverName').value = stored; send({type:'set_name',name:stored}); }
+
       status(m.arcade ? 'Arcade-Lobby verbunden – jedes Browserfenster steuert ein eigenes Kart' : `Spiel gegen ${m.policy.split('/').slice(-2, -1)[0] || m.policy} – Pfeiltasten/WASD fahren, R = Neustart`); setCamera('chase');
     }
     else if (isTraining) { newLiveKart('aktueller Trainingsstand'); status(`Training: ${m.policy}`); setCamera('chase'); }
@@ -701,7 +713,7 @@ function handleLive(m) {
       }
     }
     for (const st of m.states) {
-      const k = liveKartFor(st.id, m.game?.arcade ? st.name : m.game ? (st.id === 'du' ? (m.game.driver === 'du' ? 'du' : m.game.driver) : `KI: ${m.game.policy.split('/').slice(-2).join('/')}`) : `Training-Env ${st.id}`, st.color);
+      const k = liveKartFor(st.id, m.game?.arcade ? st.name : m.game ? (st.id === 'du' ? (m.game.driver === 'du' ? 'du' : m.game.driver) : `KI: ${m.game.policy.split('/').slice(-2).join('/')}`) : `Training-Env ${st.id}`, st.color, m.game?.arcade ? {avatar:st.avatar,car:st.car,tyre:st.tyre} : null);
       if (st.ghost && !k.isGhost) makeGhost(k);
       if (st.hist && st.hist.length) {   // intermediate positions since the last message -> smooth trail
         for (const [t, x, y, v] of st.hist) {
@@ -716,7 +728,7 @@ function handleLive(m) {
     const who = m.who === 'du' ? 'Du' : 'KI';
     status(`${who}: Runde ${m.lap_time.toFixed(2)} s${m.valid ? '' : ' (Bandenkontakt, ungültig)'}` + (m.best_du && m.best_ki ? ` – beste: du ${m.best_du.toFixed(2)} / KI ${m.best_ki.toFixed(2)}` : ''));
   } else if (m.type === 'error') {
-    serverError = m.message || 'Serverfehler'; status(serverError);
+    serverError = m.message || 'Serverfehler'; status(serverError); paddock?.notice(serverError);
   } else if (m.type === 'episode_end') {
     status(`Episode: ${m.reason}, Runden ${(m.lap_times || []).map(t => t.toFixed(2)).join(', ')}`);
     refreshKartList();
@@ -736,7 +748,7 @@ const heldKeys = { left: false, right: false, up: false, down: false, drift: fal
 const KEYMAP = { ArrowLeft: 'left', a: 'left', A: 'left', ArrowRight: 'right', d: 'right', D: 'right', ArrowUp: 'up', w: 'up', W: 'up', ArrowDown: 'down', s: 'down', S: 'down' };
 function sendKeys() { send({ type: 'keys', ...heldKeys }); }
 window.addEventListener('keydown', e => {
-  if (mode !== 'game') return;
+  if (mode !== 'game' || (club && !document.body.classList.contains('on-track'))) return;
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') {
     if (!e.key.startsWith('Arrow')) return;   // typing in a field; arrow keys always drive
     e.target.blur();
@@ -761,54 +773,11 @@ function makeGhost(k) {
 }
 function renderGameLaps() {
   if (!game) return;
-  if (game.arcade) { renderArcade(); return; }
+  if (game.arcade) { paddock?.render(game); return; }
   const row = (who, h) => h ? `<tr><td><b>${who}</b></td><td>${h.lap}</td><td>${fmt(h.current, 2)}</td><td>${h.last != null ? fmt(h.last, 2) + (h.last_valid === false ? '*' : '') : '–'}</td><td>${h.best != null ? fmt(h.best, 2) : '–'}</td></tr>` : '';
   const delta = game.delta !== undefined ? `<div style="margin-top:4px">Δ beste Runde: <b>${game.delta > 0 ? '+' : ''}${game.delta.toFixed(2)} s</b> ${game.delta > 0 ? '(KI schneller)' : game.delta < 0 ? '(du bist schneller!)' : ''}</div>` : '';
   $('gameLaps').innerHTML = `<table style="width:100%;border-collapse:collapse;margin-top:6px"><tr><th></th><th>Runde</th><th>aktuell</th><th>letzte</th><th>beste</th></tr>${row(game.driver && game.driver !== 'du' ? game.driver : 'Du', game.du)}${row('KI', game.ki)}</table>${delta}<div class="small" style="opacity:.7">* = Bandenkontakt, zählt nicht. Alle Runden landen in runs/human/laps.csv, Replays in replays/human/.</div>`;
 }
-function renderArcade() {
-  const players = game.players || [], own = players.find(p => p.id === game.player_id);
-  const host = game.host_id === game.player_id;
-  const editable = ['lobby','finished'].includes(game.phase);
-  $('garage').hidden = !editable;
-  $('arcadeStart').hidden = !editable;
-  $('arcadeStart').disabled = !host || !players.every(p => p.ready);
-  $('ready').textContent = own?.ready ? 'Bereit zurücknehmen' : 'Bereit';
-  $('addBot').hidden = $('removeBot').hidden = !host;
-  $('addBot').disabled = players.length >= 5;
-  $('removeBot').disabled = !players.some(p => p.bot);
-  $('driverName').disabled = $('setName').disabled = !editable;
-
-  $('arcadeStart').textContent = game.phase === 'lobby' ? 'Rennen starten' : 'Neues Rennen';
-  $('arcadeInfo').textContent = `${players.length}/5 Startplätze · ${game.race_laps} Runden · ${host ? 'Du bist Host' : 'Host startet das Rennen'}${own?.waiting ? ' · Einstieg beim nächsten Rennen' : ''}`;
-  $('arcadeEnergy').style.width = `${own?.energy ?? 100}%`;
-  $('arcadeBanner').style.display = '';
-  const title = game.phase === 'lobby' ? 'BEREIT?' : game.phase === 'countdown' ? `${Math.ceil(game.countdown)}` : own?.finish_time != null ? 'ZIEL!' : game.phase === 'finished' ? 'RENNEN BEENDET' : game.elapsed < 1 ? 'LOS!' : '';
-  $('arcadeBanner').innerHTML = `${title}<small>${game.phase === 'lobby' ? 'Name eingeben · Freunde einladen · Rennen starten' : own?.finish_time != null ? `Deine Zeit ${own.finish_time.toFixed(2)} s` : ''}</small>`;
-  const rows = game.phase === 'finished' ? game.results : players;
-  $('gameLaps').innerHTML = `<h3>${game.phase === 'finished' ? 'Endrangliste' : game.phase === 'lobby' ? 'Startfeld' : 'Live-Rangliste'}</h3><table style="width:100%;border-collapse:collapse"><tr><th>#</th><th>Fahrer</th><th>Runde / Zeit</th></tr>${rows.map(p => `<tr style="color:${p.id === game.player_id ? '#3fd0ff' : 'inherit'}"><td>${p.rank}</td><td>${escapeHtml(p.name)}${p.id === game.player_id ? ' (du)' : ''}${p.id === game.host_id ? ' · Host' : ''}<br><small>${escapeHtml(p.car)} · ${escapeHtml(p.tyre)}</small></td><td>${game.phase === 'lobby' ? (p.ready ? '✓ bereit' : 'wählt') : p.waiting ? 'wartet' : p.finish_time != null ? p.finish_time.toFixed(2) + ' s' : game.phase === 'finished' ? 'DNF' : Math.min(p.lap + 1, game.race_laps) + '/' + game.race_laps}${p.penalty ? ' +' + p.penalty.toFixed(0) + 's' : ''}</td></tr>`).join('')}</table><p class="small">Zeiten im Ziel enthalten Zeitstrafen.</p>`;
-}
-function showSpecs() {
-  const cars = {Club:'79 km/h · ausgewogen',Sprint:'72 km/h · stärkster Antritt, agil',GT:'86 km/h · ruhige Lenkung, langsamer Antritt'};
-  const tyres = {Standard:'ausgewogene Haftung',Grip:'mehr Kurvengrip, weniger Antritt',Speed:'stärkerer Antritt, weniger Kurvengrip'};
-  $('specs').textContent = cars[$('car').value] + ' · ' + tyres[$('tyre').value];
-}
-showSpecs();
-for (const id of ['car','tyre']) $(id).onchange = () => {
-  showSpecs(); send({type:'setup',car:$('car').value,tyre:$('tyre').value});
-};
-$('ready').onclick = () => {
-  const me = game.players.find(p => p.id === game.player_id);
-  send({type:'ready',name:$('driverName').value.trim(),value:!me.ready});
-};
-$('addBot').onclick = () => send({type:'bot',add:true});
-$('removeBot').onclick = () => send({type:'bot',add:false});
-$('arcadeStart').addEventListener('click', () => send({type:'control',action:'start_race'}));
-$('arcadeInvite').addEventListener('click', async () => {
-  const invite = game?.invite_url || location.href;
-  try { await navigator.clipboard.writeText(invite); status('Einladungslink kopiert.'); }
-  catch { status(`Einladungslink: ${invite}`); }
-});
 $('setName').addEventListener('click', () => { const n = $('driverName').value.trim(); if (n) { send({ type: 'set_name', name: n }); if (game) { game.driver = n; } try { localStorage.setItem('driverName', n); } catch (e) {} } $('driverName').blur(); $('setName').blur(); status('Name gesetzt – Pfeiltasten/WASD fahren (Klick in die 3D-Ansicht, falls nichts passiert)'); });
 $('driverName').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('setName').click(); } });
 renderer.domElement.addEventListener('mousedown', () => { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); });
@@ -855,7 +824,7 @@ window.kartViewer = {
   setPanel(visible) { $('panel').classList.toggle('hidden', !visible); },
   loadReplay(url) { return loadReplayUrl(url); },
   connect(url) { $('wsUrl').value = url; if (!ws) $('connect').click(); },
-  karts() { return karts.map(k => ({ name: k.name, steps: k.traj.t.length, lapTimes: k.lapTimes })); },
+  karts() { return karts.map(k => ({ name: k.name, steps: k.traj.t.length, x:k.group.position.x, y:-k.group.position.z, lapTimes: k.lapTimes })); },
   gameState() { return game ? structuredClone(game) : null; },
   maxTime,
 };
@@ -881,9 +850,17 @@ window.kartViewer = {
   if (params.get('ws')) $('wsUrl').value = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.hostname}:${params.get('ws')}`;
   if (params.has('arcade') && !params.has('ws')) $('wsUrl').value = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/socket';
   if (params.get('live') !== null) { setMode('live'); retryUntil = Date.now() + 90000; connectLive(); }
-  if (params.get('game') !== null) { setMode('game'); retryUntil = Date.now() + 90000; connectLive(); }
+  if (params.get('game') !== null && !club) { setMode('game'); retryUntil = Date.now() + 90000; connectLive(); }
   if (params.get('cam')) setCamera(params.get('cam'));
   if (params.get('panel') === '0') $('panel').classList.add('hidden');
+  if(club){
+    setMode('game');
+    $('panel').classList.add('hidden');
+    $('toggle').textContent='Analyse';
+    $('viewerTitle').textContent='Entwickler / Analyse';
+    for(const id of ['showTrail','showRaceline']) {$(id).checked=false;$(id).dispatchEvent(new Event('change'));}
+    paddock=createPaddock(connectLive,send);
+  }
   window.kartViewer.ready = true;
   animate();
 })();

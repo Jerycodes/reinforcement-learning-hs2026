@@ -1,0 +1,93 @@
+// Run against a local server with Playwright and Chromium (see arcade_multiplayer.md).
+const {chromium}=require('playwright');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const os=require('node:os');
+const path=require('node:path');
+const artifacts=fs.mkdtempSync(path.join(os.tmpdir(),'kart-paddock-'));
+const url=process.env.KART_URL || 'http://localhost:8031/viewer/?game&arcade&ws=8796';
+
+async function driver(page){
+  // Synthetic key presses only. Each client reads the public centreline and the normal broadcast.
+  await page.addInitScript(()=>{
+    const Native=window.WebSocket;
+    const map=fetch('../kart_rl/data/race_inn_roggwil.json').then(r=>r.json());
+    window.WebSocket=class extends Native {
+      constructor(...args){
+        super(...args);
+        let id,keys={},track;
+        map.then(data=>track=data.centerline);
+        this.addEventListener('message',event=>{
+          const m=JSON.parse(event.data);if(m.type==='hello')id=m.player_id;
+          if(m.type!=='states'||!track)return;
+          const st=m.states.find(s=>s.id===id);if(!st)return;
+          const driving=m.game.phase==='racing';
+          const pos=Math.round(st.s*track.length/639.6354);
+          const target=track[(pos+Math.round(4+st.vx*.40))%track.length];
+          const delta=Math.atan2(target[1]-st.y,target[0]-st.x)-st.yaw;
+          const error=Math.atan2(Math.sin(delta),Math.cos(delta));
+          const goal=11/(1+1.6*Math.abs(error));
+          const next={ArrowUp:driving&&st.vx<goal,ArrowDown:driving&&st.vx>goal+1,
+                      ArrowLeft:driving&&error>.085,ArrowRight:driving&&error<-.085};
+          for(const [key,value] of Object.entries(next))if(!!keys[key]!==value){
+            document.body.dispatchEvent(new KeyboardEvent(value?'keydown':'keyup',{key,bubbles:true}));
+          }
+          keys=next;
+        });
+      }
+    };
+  });
+}
+async function enter(page,link,name,avatar,car,tyre){
+  await driver(page);await page.goto(link);
+  await page.fill('#pilotName',name);await page.click('[data-avatar="'+avatar+'"]');
+  await page.click('#nextGarage');await page.click('[data-car="'+car+'"]');
+  await page.click('[data-tyre="'+tyre+'"]');
+  if(name==='Kath')await page.screenshot({path:path.join(artifacts,'garage.png')});
+  await page.click('#joinGrid');await page.waitForSelector('#clubReady:visible');
+}
+(async()=>{
+  const browser=await chromium.launch({executablePath:process.env.CHROME_BIN,headless:true,
+    args:['--enable-unsafe-swiftshader','--disable-renderer-backgrounding','--disable-background-timer-throttling']});
+  try{
+    const errors=[];
+    const pages=await Promise.all([0,1].map(async()=>{const p=await browser.newPage({viewport:{width:1024,height:640}});
+      p.on('pageerror',e=>errors.push(e.message));return p;}));
+    const [a,b]=pages;
+    await enter(a,url,'Kath','Fuchs','Club','Standard');
+    await enter(b,a.url(),'Gast','Panda','GT','Grip');
+    await a.click('#plusBot');await a.click('#plusBot');await a.click('#plusBot');
+    await a.waitForFunction(()=>window.kartViewer.gameState().players.length===5);
+    assert(await a.locator('#greenFlag').isDisabled());
+    await b.click('#clubReady');await a.click('#clubReady');
+    await a.click('#greenFlag');
+    const state=p=>p.evaluate(()=>window.kartViewer.gameState());
+    await Promise.all(pages.map(p=>p.waitForFunction(()=>window.kartViewer.gameState()?.phase==='countdown')));
+    const first=await state(a);assert.equal(first.elapsed,0);assert.deepEqual(first.grid,(await state(b)).grid);
+    await Promise.all(pages.map(p=>p.waitForFunction(()=>{
+      const rendered=window.kartViewer.karts();
+      return window.kartViewer.gameState().grid.every(slot=>{
+        const kart=rendered.find(k=>k.name===slot.name);
+        return kart && Math.hypot(kart.x-slot.x,kart.y-slot.y)<.015;
+      });
+    },null,{timeout:5000})));
+    await a.screenshot({path:path.join(artifacts,'grid.png')});
+    await a.waitForSelector('.lights');await b.waitForSelector('.lights');
+    for(let i=0;i<48;i++){
+      await a.waitForTimeout(10000);const g=await state(a);
+      console.log(g.phase,g.elapsed,g.players.map(p=>[p.name,p.lap,Math.round(p.progress)]));
+      if(g.phase==='finished')break;
+    }
+    const result=await state(a);
+    assert.equal(result.phase,'finished');assert(result.results.every(p=>p.lap===3 && p.finish_time>0));
+    await b.waitForSelector('#podium:visible');assert.deepEqual(result.results,(await state(b)).results);
+    await a.screenshot({path:path.join(artifacts,'result.png')});
+    await b.click('#againReady');await a.click('#againReady');await a.click('#againStart');
+    await a.waitForFunction(()=>window.kartViewer.gameState().phase==='countdown');
+    const rematch=await state(a);assert.notEqual(first.race_id,rematch.race_id);
+    await b.waitForFunction(()=>window.kartViewer.gameState().phase==='countdown');
+    assert.deepEqual(rematch.grid,(await state(b)).grid);
+    assert(rematch.players.every(p=>!p.lap && p.finish_time===null));assert.deepEqual(errors,[]);
+    console.log('PASS',artifacts,first.grid.map(p=>p.name),rematch.grid.map(p=>p.name));
+  }finally{await browser.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

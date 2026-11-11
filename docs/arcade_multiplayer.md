@@ -10,11 +10,21 @@ Im Repository auf `feature/pitstop-strategy-analysis` unter Windows genügt mit 
 
 Auf einem frischen Checkout zuerst `py -3 -m venv .venv` und `.\.venv\Scripts\python.exe -m pip install -e .` ausführen. Für PPO oder Tests zusätzlich `.\.venv\Scripts\python.exe -m pip install -e ".[train,dev]"`.
 
-1. [Rennraum erstellen](http://localhost:8031/viewer/?game&arcade&ws=8796). Beim Öffnen erstellt der Server einen privaten Raum und ergänzt die Browseradresse um einen zufälligen Raumschlüssel.
-2. **Einladungslink kopieren** und die Adresse in einem zweiten Fenster öffnen. Beide sehen dasselbe Startfeld. Pro Browserfenster gibt es ein Kart. Die Adresse ohne Raumschlüssel erstellt einen weiteren unabhängigen Raum.
-3. Beide wählen Namen, Kart und Reifen und klicken **Bereit**. Doppelte Namen werden auch bei anderer Gross-/Kleinschreibung abgewiesen. Jede Änderung der Auswahl hebt die Bereitmeldung auf. Der Host kann freie Plätze mit **+ Bot** füllen und mit **− Bot** wieder freigeben. Insgesamt gibt es fünf Plätze.
-4. Der Host klickt **Rennen starten**. Nach drei Sekunden geht es über drei Runden. Das aktive Fenster bekommt die Tastatureingaben. Für zwei gleichzeitig steuernde Menschen zwei Computer verwenden.
-5. Mit **WASD** oder **Pfeiltasten** fahren und bremsen, beim Lenken **Shift** halten zum Driften. Nach mindestens 0,7 Sekunden Drift gibt Loslassen einen Mini-Boost. **Leertaste** nutzt den aufladbaren Boost. **R** oder **Backspace** setzt das Kart auf die Mittellinie und kostet drei Sekunden. **1–4** wechseln die Kamera.
+1. [Fahrerprofil öffnen](http://localhost:8031/viewer/?game&arcade&ws=8796). Namen eingeben und Fuchs, Panda, Luchs oder Drache auswählen. **Zur Garage** zeigt das eigene 3D-Kart. Kart und Reifen verändern die Vorschau sowie die Werte für Tempo, Antritt und Handling. **In die Lobby** erstellt den Raum oder tritt einem eingeladenen Raum bei.
+2. Als Host **Einladungslink kopieren**. Die zweite Person öffnet diesen Link, wählt ihr eigenes Profil und tritt bei. Fünf Fahrerkarten zeigen belegte und freie Plätze. Der Host kann mit **+ Bot** und **− Bot** das Feld ergänzen.
+3. Alle Menschen klicken **Bereit melden**, der Host **Rennen starten**. Vier Sekunden lang erscheinen Aufstellung und Startpositionen. Danach leuchten im Sekundentakt drei rote Lampen auf. Bei Grün starten Fahrt und Uhr gemeinsam.
+4. **WASD / Pfeile** lenken, beschleunigen oder bremsen. Beim Lenken **Shift** halten zum Driften. Loslassen nach mindestens 0,7 Sekunden Drift gibt einen Mini-Boost. **Leertaste** nutzt den Boostvorrat. **R / Backspace** setzt auf die Mittellinie zurück und kostet drei Sekunden. Kamera und Streckenoverlays liegen unter **Analyse**. Die LiDAR-Strahlen gehören zur bestehenden Live-Analyse.
+5. Nach drei Runden erscheint die Zielzeit. Wenn das Feld gewertet ist, zeigt die Endrangliste alle Zeiten inklusive Strafen. Für eine Revanche melden sich die Menschen erneut bereit und der Host wählt **Neues Rennen**.
+
+### Aufstellung und Zeitmessung
+
+Die Roggwiler Mittellinie verläuft nach der Startlinie zunächst westwärts. Die erste deutliche Richtungsänderung liegt bei etwa 22 m. Auf der rund 7,2 m breiten Geraden lost der Server für jedes Rennen neu. Die Spuren liegen je 1,55 m von der Mittellinie entfernt, die Reihen 3,8 m auseinander, die rechte Spur ist 0,85 m nach hinten versetzt. Platz eins steht bei 12 m, Platz fünf bei 4,4 m. Alle Karts stehen vollständig jenseits der Ziellinie und vor der Kurve.
+
+Jedes Kart startet bei null abgeschlossenen Runden. Der Rennfortschritt beginnt an seiner tatsächlichen Projektion auf die Mittellinie. Beim ersten regulären Umlauf über die Linie zählt Runde eins, beim dritten endet das Rennen. Die Auslosung wird zusammen mit Positionen und Ausrichtung an beide Browser gesendet. Die Solo-Gymnasium-Umgebung startet weiterhin an ihrer bisherigen Position. Beobachtungen, Aktionen, Reward und Modellformat bleiben kompatibel.
+
+### Browsertest wiederholen
+
+Bei laufendem lokalen Server kann `node scripts/test_paddock.cjs` den vollständigen Ablauf mit zwei getrennten Chromium-Sitzungen und drei Bots fahren. Dazu muss Node das Paket `playwright` finden und dessen Chromium installiert sein (alternativ `CHROME_BIN` auf ein installiertes Chrome setzen). Der Test erzeugt Tastaturereignisse, prüft die gerenderten Startpositionen und vergleicht Ergebnisse und Revanche beider Browser. Screenshots landen im ausgegebenen temporären Verzeichnis. Ein vollständiges Rennen benötigt einige Minuten. Die normale Ergebnis-CSV enthält auch diese Testrennen.
 
 ### Karts und Reifen
 
@@ -67,5 +77,5 @@ kart.example.org {
 }
 ```
 
-4. Im Browser `https://kart.example.org/viewer/?game&arcade` öffnen. Ohne ws-Port im Link verwendet der Viewer dieselbe Domain mit WSS auf /socket. Caddy übernimmt TLS und den WebSocket-Upgrade. [Caddy-Dokumentation](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy)
+4. Im Browser `https://kart.example.org/viewer/?game&arcade` öffnen und ein Fahrerprofil erstellen. Ohne ws-Port im Link verwendet der Viewer dieselbe Domain mit WSS auf /socket. Caddy übernimmt TLS und den WebSocket-Upgrade. [Caddy-Dokumentation](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy)
 5. Den erzeugten Link inklusive Raumparameter an vier weitere Personen senden. Wer den vollständigen Link kennt, kann einen freien Platz belegen. Von einem zweiten Netz Beitritt, Countdown, Steuerung, Hostwechsel und Zielwertung testen. Die Spielversion ist lokal geprüft. Ein öffentlicher Fünf-Personen-Test und die Messung der Netzwerklatenz stehen aus.

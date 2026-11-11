@@ -205,3 +205,62 @@ def test_arcade_gym_and_old_checkpoint():
     with pytest.raises(ValueError, match="Inkompatibles Modell"):
         load_arcade_policy(ROOT / "runs/driver_validation_v1/winner/best.zip")
     env.close()
+
+
+def test_grid_clearance_order_and_standing_start(tmp_path, monkeypatch):
+    room = RaceRoom(results_path=tmp_path / "results.csv")
+    host = room.join()
+    for _ in range(4):
+        room.join(bot=True)
+    host.ready = True
+    # Two controlled draws allow the test to distinguish fresh draws from a cached grid.
+    draws = iter([False, True])
+
+    def draw(players):
+        if next(draws):
+            players.reverse()
+
+    monkeypatch.setattr("kart_rl.game.race.random.shuffle", draw)
+    assert room.start(host.id)
+    order = [slot["id"] for slot in room.grid]
+    for slot in room.grid:
+        env = room.players[slot["id"]].racer.env
+        assert env._clearance() > env.cfg.off_track_margin
+        assert min(env.track.localize(x, y)[0] for x, y in env.kart.footprint()) > 2
+        assert max(env.track.localize(x, y)[0] for x, y in env.kart.footprint()) < 15
+        assert (slot["x"], slot["y"], slot["yaw"]) == pytest.approx((env.kart.x, env.kart.y, env.kart.yaw))
+        for other in room.grid[: slot["position"] - 1]:
+            # Disjoint bounding circles imply disjoint oriented bodies.
+            assert np.hypot(slot["x"] - other["x"], slot["y"] - other["y"]) > np.hypot(
+                env.kart.p.length, env.kart.p.width
+            )
+    initial = room.message()["states"]
+    room.handle(host.id, {"type": "keys", "up": True})
+    while room.phase == "countdown":
+        room.tick()
+    assert room.elapsed == 0 and initial == room.message()["states"]
+    room.phase = "finished"
+    assert room.start(host.id)
+    assert [slot["id"] for slot in room.grid] == order[::-1]
+
+
+def test_first_forward_finish_line_crossing_from_grid(tmp_path):
+    from kart_rl.game.race import rule_action
+
+    room = RaceRoom(results_path=tmp_path / "results.csv")
+    player = room.join()
+    player.ready = True
+    room.start(player.id)
+    env = player.racer.env
+    start = env.s
+    for i in range(3000):
+        previous = env.s
+        player.step(room.dt, 3, (i + 1) * room.dt, rule_action(player))
+        if previous - env.s > env.track.length / 2:
+            assert len(player.laps) == 1
+            assert env.total_progress - start > env.track.length - 14
+            assert player.finish_time is None
+            break
+        assert player.laps == []
+    else:
+        pytest.fail("Regelbot hat die Ziellinie nicht erreicht.")
