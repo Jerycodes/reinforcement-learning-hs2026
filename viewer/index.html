@@ -40,6 +40,7 @@
 </head>
 <body>
 <div id="scene"></div>
+<aside id="raceMap" aria-label="Streckenkarte und Rennpositionen" hidden><canvas width="400" height="276" aria-hidden="true"></canvas><ol aria-label="Rennpositionen"></ol></aside>
 <div id="hud">lade Strecke …</div>
 <div id="legend"></div>
 <div id="panel">
@@ -110,6 +111,7 @@
 
 <script type="module">
 import * as THREE from 'three';
+import {createRaceMap} from './race-map.js';
 import {startBoxes,gantryLights} from './start-grid.js';
 import {createPaddock} from './paddock.js';
 import {paddockKart} from './paddock-model.js';
@@ -174,7 +176,7 @@ window.addEventListener('resize', resize);
 resize();
 
 // ------------------------------------------------------------------ track
-let startField, gridRace, lightState, finishStripe;
+let drawRaceMap, startField, gridRace, lightState, finishStripe;
 let track = null, raceline = null, center = null;
 const overlays = {};
 let bounds = { cx: 70, cz: -55, size: 140 };
@@ -229,6 +231,7 @@ function checkerTexture() {
 
 function buildTrack(t) {
   track = t;
+  if (club) drawRaceMap = createRaceMap($('raceMap'), t);
   const x = t.centerline.map(p => p[0]), y = t.centerline.map(p => p[1]);
   const x0 = Math.min(...x), x1 = Math.max(...x), y0 = Math.min(...y), y1 = Math.max(...y);
   bounds = { cx: (x0 + x1) / 2, cz: -(y0 + y1) / 2, size: Math.max(x1 - x0, y1 - y0) + 20 };
@@ -743,6 +746,7 @@ function handleLive(m) {
   } else if (m.type === 'states') {
     if (m.game) { game = { ...game, ...m.game }; renderGameLaps(); }
     if (m.game?.arcade) {
+      drawRaceMap?.(game, m.states);
       const ids = new Set(m.states.map(st => st.id));
       for (const [id, kart] of Object.entries(liveKarts)) if (!ids.has(id)) {
         scene.remove(kart.group); scene.remove(kart.trail); karts.splice(karts.indexOf(kart), 1); delete liveKarts[id]; refreshKartList();

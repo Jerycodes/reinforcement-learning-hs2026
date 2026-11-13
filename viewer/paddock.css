@@ -45,3 +45,12 @@ html.club body {font-family:Roboto,"Segoe UI",sans-serif}
 .lights.green i{background:#86ff64;box-shadow:0 0 18px #62f891}
 
 .driver-camera #startSignal .lights { display:none }
+#raceMap{position:absolute;bottom:14px;right:14px;width:clamp(130px,16vw,196px);box-sizing:border-box;background:#101f27eb;border:1px solid #73908c;border-radius:12px;color:white;padding:5px 8px 7px;pointer-events:none;font:600 12px/1.2 system-ui,sans-serif}
+body:not(.on-track) #raceMap,#raceMap[hidden]{display:none}
+#raceMap canvas{display:block;width:100%;height:auto}
+#raceMap ol{list-style:none;padding:0;margin:0}
+#raceMap li{display:grid;grid-template-columns:1.4em minmax(0,1fr) auto;align-items:center;gap:5px;margin-top:2px}
+#raceMap li span:first-child{background:var(--kart-color);color:#101416;text-align:center;border-radius:4px}
+#raceMap li span:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#raceMap li span:last-child{color:#c4d3d3}
+@media(max-height:500px){#raceMap{width:126px;font-size:10px}}
