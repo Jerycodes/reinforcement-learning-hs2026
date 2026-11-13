@@ -151,3 +151,18 @@ def test_side_by_side_at_narrowest_cross_section():
         advance_field(players, [GAS, GAS], room.dt, 3, (tick + 1) * room.dt)
         check_field(players)
     assert all(p.racer.env.s > section for p in players)
+
+
+def test_bot_yields_when_passing_lane_is_occupied_across_finish_line():
+    from kart_rl.game.race import rule_action
+
+    room = RaceRoom()
+    bot, leader, alongside = [room.join() for _ in range(3)]
+    length = bot.racer.env.track.length
+    place(bot, length - 1, 0, 18)
+    place(leader, 2, 0.4, 7)
+    place(alongside, length - 2, -1.45, 18)
+    assert rule_action(bot, [bot, leader, alongside])[1] < 0
+    assert not bot.passing_lane
+    rule_action(bot, [bot, leader])
+    assert bot.passing_lane < 0

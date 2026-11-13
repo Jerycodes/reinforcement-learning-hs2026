@@ -500,34 +500,52 @@ def rule_action(player, opponents=()):
     env = player.racer.env
     kart, track = env.kart, env.track
     skill = BOT_LEVELS[player.level]
-    look = 3.0 + kart.vx * 0.27
+    attacking = player.level in ("Sport", "Pro")
+    look = 3.0 + kart.vx * (0.25 if attacking else 0.27)
     ahead = np.array([look, look + 4, look + 10, look + 18])
     bends = track.curvature_ahead(env.s, ahead)
     corner = bends[0]
+    traffic = []
+    for rival in opponents:
+        if rival is player:
+            continue
+        gap = (rival.racer.env.s - env.s + track.length / 2) % track.length - track.length / 2
+        traffic.append((gap, rival.racer.env.lateral))
     blockers = [
-        p
-        for p in opponents
-        if p is not player
-        and 0 < (p.racer.env.s - env.s) % track.length < max(7, kart.vx * 0.85)
-        and abs(p.racer.env.lateral - env.lateral) < 1.8
+        (gap, lat)
+        for gap, lat in traffic
+        if 0 < gap < max(7, kart.vx * 0.85) and abs(lat - env.lateral) < 1.8
     ]
+    yield_speed = math.inf
     if blockers:
-        closest = min(blockers, key=lambda p: (p.racer.env.s - env.s) % track.length)
-        if not player.passing_lane:
-            player.passing_lane = -1.45 if closest.racer.env.lateral >= 0 else 1.45
-    elif not any(p is not player and abs(p.racer.env.s - env.s) < 5 for p in opponents):
+        gap, lateral = min(blockers)
+        preferred = -1.45 if lateral >= 0 else 1.45
+        # Hold a clear passing lane; include karts already alongside on either side of the lap seam.
+        choices = dict.fromkeys([player.passing_lane or preferred, preferred, -preferred])
+        for lane in choices:
+            if all(abs(lat - lane) > 1.3 for dist, lat in traffic if -3 < dist <= gap + 2):
+                player.passing_lane = lane
+                break
+        else:
+            # Boxed in: lift before running into the leader.
+            if gap < max(3.5, kart.vx * 0.36):
+                yield_speed = max(0.0, kart.vx - 2)
+    elif all(abs(dist) >= 5 for dist, _ in traffic):
         player.passing_lane = 0
     offset = player.passing_lane or float(np.clip(corner * 13, -0.95, 0.95))
     target = track.start_pose(env.s + look, offset)
     heading = math.atan2(target[1] - kart.y, target[0] - kart.x)
     error = (heading - kart.yaw + math.pi) % (2 * math.pi) - math.pi
-    steer = np.clip(error * (2.4 + kart.vx * 0.035), -1, 1)
+    steer_gain = 3.1 if attacking else 2.4
+    steer = np.clip(error * (steer_gain + kart.vx * 0.035), -1, 1)
     # Lateral acceleration budget plus braking distance to each preview point.
-    corner_speeds = np.sqrt(18 * skill * kart.grip / np.maximum(abs(bends), 0.015))
+    corner_budget = {"Club": 18, "Sport": 23, "Pro": 25}[player.level]
+    corner_speeds = np.sqrt(corner_budget * skill * kart.grip / np.maximum(abs(bends), 0.015))
     limits = np.sqrt(corner_speeds**2 + 2 * 13 * np.maximum(ahead - look, 0))
     straight = max(abs(bends[:3])) < 0.035 and abs(error) < 0.16
     boost = straight and skill >= 0.88 and player.energy > 5
-    target_speed = min((kart.limit + 6 * boost) * skill, min(limits), 26 / (1 + 1.7 * abs(error)))
+    alignment_limit = 32 / (1 + 1.1 * abs(error)) if attacking else 26 / (1 + 1.7 * abs(error))
+    target_speed = min((kart.limit + 6 * boost) * skill, min(limits), alignment_limit, yield_speed)
     drift = skill >= 0.88 and abs(steer) > 0.48 and 8 < kart.vx < 18
     return np.array(
         [steer, np.clip((target_speed - kart.vx) * 1.7, -1, 1), 1 if drift else -1, 1 if boost else -1],
