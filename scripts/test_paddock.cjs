@@ -112,7 +112,7 @@ async function enter(page,link,name,avatar,car,tyre){
     await b.waitForSelector('#podium:visible');assert.deepEqual(result.results,(await state(b)).results);
     for(const p of pages)assert.deepEqual(await p.evaluate(()=>window.lineCrossings),[0,1,2,3]);
     await a.click('#saveLap');
-    assert.match(await a.locator('#personalRecord').innerText(),/Club \/ Standard Â· KartArcade-v2/);
+    assert.match(await a.locator('#personalRecord').innerText(),/Club \/ Standard \u00b7 KartArcade-v2/);
     await a.screenshot({path:path.join(artifacts,'result.png')});
     await b.click('#againReady');await a.click('#againReady');await a.click('#againStart');
     await a.waitForFunction(()=>window.kartViewer.gameState().phase==='countdown');
