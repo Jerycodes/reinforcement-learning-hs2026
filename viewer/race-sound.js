@@ -1,9 +1,9 @@
-import {musicPlayer} from './music-player.js';
+import {musicPlayer, soundtrackUrl} from './music-player.js';
 export const profiles={Club:['Club-Kart',.94],Sprint:['Sprint-Kart',1.09],GT:['Sport-Kart',1.01]};
 export function raceSound(){
   const panel=document.createElement('details');
   panel.id='raceSound';
-  panel.innerHTML='<summary>♪ Sound</summary><label><input type="checkbox"> Stumm</label>';
+  panel.innerHTML='<summary>Sound</summary><label><input type="checkbox"> Stumm</label>';
   document.body.append(panel);
   let ctx, master, phase='', lastCue='', lastContact=false, lastBoost=false;
   const voices=new Map(), buses={}, settings={Motor:.65,Musik:.32,Effekte:.6,Stumm:false};
@@ -17,7 +17,8 @@ export function raceSound(){
   }
   const mute=panel.querySelector('input');mute.checked=settings.Stumm;
   mute.onchange=()=>{settings.Stumm=mute.checked;mix();};
-  for(const key of ['Motor','Musik','Effekte']){
+  const channels=soundtrackUrl ? ['Motor','Musik','Effekte'] : ['Motor','Effekte'];
+  for(const key of channels){
     const label=document.createElement('label');label.textContent=key;
     const input=document.createElement('input');input.type='range';input.min=0;input.max=1;input.step=.01;input.value=settings[key];
     input.oninput=()=>{settings[key]=Number(input.value);mix();};label.append(input);panel.append(label);
@@ -33,7 +34,7 @@ export function raceSound(){
         if(!response.ok)throw Error(name);
         return ctx.decodeAudioData(await response.arrayBuffer());
       })).catch(()=>null);
-      for(const key of ['Motor','Musik','Effekte']){buses[key]=ctx.createGain();buses[key].connect(master);}
+      for(const key of channels){buses[key]=ctx.createGain();buses[key].connect(master);}
       music=musicPlayer(ctx,buses.Musik);
       samples.then(decoded=>{bank=decoded;});
       mix();
@@ -48,20 +49,20 @@ export function raceSound(){
     osc.connect(gain).connect(buses[bus]);osc.start(t);osc.stop(t+duration+.01);
   }
   let noise;
-  function friction(type){
+  function friction(type, intensity=1){
     if(!noise){
       noise=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);
       const data=noise.getChannelData(0);
       for(let i=0;i<data.length;i++) data[i]=Math.random()*2-1;
     }
     const [frequency,end,duration,level]={
-      skid:[1350,1050,.19,.18],boost:[700,2200,.32,.17],impact:[460,100,.13,.6]
+      flag:[1450,580,.34,.35], skid:[1200,850,.19,.20],boost:[700,2200,.32,.17],impact:[460,100,.13,.6]
     }[type];
     const src=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain(),t=ctx.currentTime;
     src.buffer=noise;filter.type=type==='impact'?'lowpass':'bandpass';
     filter.Q.value=type==='skid'?3:.8;
     filter.frequency.setValueAtTime(frequency,t);filter.frequency.exponentialRampToValueAtTime(end,t+duration);
-    gain.gain.setValueAtTime(.0001,t);gain.gain.exponentialRampToValueAtTime(level,t+.012);
+    gain.gain.setValueAtTime(.0001,t);gain.gain.exponentialRampToValueAtTime(level*intensity,t+.012);
     gain.gain.exponentialRampToValueAtTime(.0001,t+duration);
     src.connect(filter).connect(gain).connect(buses.Effekte);src.start(t,Math.random()*.5);src.stop(t+duration);
   }
@@ -84,7 +85,7 @@ export function raceSound(){
     voice.stereo.pan.setTargetAtTime(pan,t,.09);
     voice.layers.forEach(({src,gain},i)=>{
       src.playbackRate.setTargetAtTime(profiles[car][1]*(i?.73+.52*rev:.88+.64*rev),t,.12);
-      gain.gain.setTargetAtTime(volume*(i?Math.sqrt(blend):Math.sqrt(1-blend))*(.7+.3*Math.max(0,throttle)),t,.09);
+      gain.gain.setTargetAtTime(volume*(i?Math.sqrt(blend):Math.sqrt(1-blend))*(.42+.58*Math.max(0,throttle)),t,.09);
     });
   }
   function clear(keep=[]){
@@ -109,7 +110,9 @@ export function raceSound(){
     if(!ctx)return;
     const t=ctx.currentTime,own=states.find(s=>s.id===g.player_id);
     if(phase!==g.phase){music(g.phase);stopGarage();lastCue='';lastContact=lastBoost=false;
-      if(g.phase==='finished')[392,494,587].forEach((f,i)=>note('Effekte',t+i*.13,f,f,.32,.16));}
+      }
+    if(own?.parked && !parked) friction('flag');
+    parked=Boolean(own?.parked);
     phase=g.phase;
     const cue=phase==='countdown'?Math.ceil(g.countdown):phase==='racing'&&g.elapsed<.5?'go':'';
     if(cue!==lastCue && (cue==='go'||(cue>0&&cue<=3)))note('Effekte',t,cue==='go'?880:440,cue==='go'?880:440,.17,.18);
@@ -118,15 +121,19 @@ export function raceSound(){
     clear(active.map(s=>s.id));
     for(const s of active){
       const dx=s.x-own.x,dy=s.y-own.y,dist=Math.hypot(dx,dy),me=s.id===own.id;
-      motor(s.id,s.car,Math.min(1,Math.abs(s.vx)/28+.16*Math.max(0,s.throttle)),(me?.95:.24/(1+dist*.28))*(phase==='lobby'?.22:1),
+      motor(s.id,s.car,Math.min(1,Math.abs(s.vx)/28+.16*Math.max(0,s.throttle)),(me?.83:.16/(1+dist*.28))*(phase==='lobby'?.22:1),
         Math.max(-1,Math.min(1,(dx*Math.sin(own.yaw)-dy*Math.cos(own.yaw))/6)),s.throttle);
     }
     if(own?.boost&&!lastBoost)friction('boost');
     const contact=own?.contact || own?.off_track;
     if(contact&&!lastContact)friction('impact');
-    if(own?.drifting && Math.floor(t*8)!==lastSkid){lastSkid=Math.floor(t*8);friction('skid');}
+    const scrub=Math.min(1,Math.abs((own?.steer || 0)*(own?.vx || 0))/8);
+    if(phase==='racing' && own && !own.parked && (own.drifting || scrub>.42) && t-lastSkid>.16){
+      lastSkid=t;
+      friction('skid',own.drifting ? .85 : scrub*.36);
+    }
     lastContact=contact;lastBoost=own?.boost;
   }
-  let lastSkid=-1;
+  let parked=false,lastSkid=-1;
   return {unlock,preview,update,menu(){phase='menu';music?.(phase);},stop(){phase='';music?.(phase);stopGarage();clear();}};
 }

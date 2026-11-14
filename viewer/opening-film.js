@@ -19,12 +19,11 @@ export function openingFilm(track,scene,camera,renderer,sound){
       const kart=paddockKart(car,'Grip',avatar);scene.add(kart);cast.push(kart);
     }
     const start=performance.now(),pts=track.centerline;
-    let shot=-1;
+    sound.preview('Sprint');
     function render(now){
       const t=Math.max(0,now-start)/1000;
       if(t>=8){finish();return;}
       const cut=Math.min(3,Math.floor(t/2));
-      if(cut!==shot){shot=cut;sound.preview(cut%2?'GT':'Sprint');}
       title.hidden=t>.9&&t<6.8;
       for(const [i,kart] of cast.entries()){
         const pos=(26+t*13+i*(5-t*.8))%pts.length,n=Math.floor(pos),a=pts[n],b=pts[(n+1)%pts.length],u=pos-n;
