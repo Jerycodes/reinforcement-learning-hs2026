@@ -1,3 +1,4 @@
+import {musicPlayer} from './music-player.js';
 export const profiles={Club:['Club-Kart',.94],Sprint:['Sprint-Kart',1.09],GT:['Sport-Kart',1.01]};
 export function raceSound(){
   const panel=document.createElement('details');
@@ -21,7 +22,7 @@ export function raceSound(){
     const input=document.createElement('input');input.type='range';input.min=0;input.max=1;input.step=.01;input.value=settings[key];
     input.oninput=()=>{settings[key]=Number(input.value);mix();};label.append(input);panel.append(label);
   }
-  let samples, garage, request=0;
+  let music, samples, garage, request=0;
   function unlock(){
     if(!window.AudioContext)return;
     if(!ctx){
@@ -33,6 +34,7 @@ export function raceSound(){
         return ctx.decodeAudioData(await response.arrayBuffer());
       })).catch(()=>null);
       for(const key of ['Motor','Musik','Effekte']){buses[key]=ctx.createGain();buses[key].connect(master);}
+      music=musicPlayer(ctx,buses.Musik);
       samples.then(decoded=>{bank=decoded;});
       mix();
     }
@@ -106,7 +108,7 @@ export function raceSound(){
   function update(g,states){
     if(!ctx)return;
     const t=ctx.currentTime,own=states.find(s=>s.id===g.player_id);
-    if(phase!==g.phase){stopGarage();lastCue='';lastContact=lastBoost=false;
+    if(phase!==g.phase){music(g.phase);stopGarage();lastCue='';lastContact=lastBoost=false;
       if(g.phase==='finished')[392,494,587].forEach((f,i)=>note('Effekte',t+i*.13,f,f,.32,.16));}
     phase=g.phase;
     const cue=phase==='countdown'?Math.ceil(g.countdown):phase==='racing'&&g.elapsed<.5?'go':'';
@@ -126,5 +128,5 @@ export function raceSound(){
     lastContact=contact;lastBoost=own?.boost;
   }
   let lastSkid=-1;
-  return {unlock,preview,update,menu(){phase='menu';},stop(){phase='';stopGarage();clear();}};
+  return {unlock,preview,update,menu(){phase='menu';music?.(phase);},stop(){phase='';music?.(phase);stopGarage();clear();}};
 }
