@@ -1,0 +1,5 @@
+motor-garage.wav verwendet 090912-003.mp3. idle.wav und load.wav verwenden 090912-000.mp3 aus „Engines - Startup, Idle & Rev“ von dklon.
+Quelle: https://opengameart.org/content/engines-startup-idle-rev
+Lizenz dieser bearbeiteten Motoraufnahmen: CC BY-SA 3.0 https://creativecommons.org/licenses/by-sa/3.0/
+Bearbeitung: Mono, 32 kHz, Ausschnitte, Pegelanpassung, Überblendungen. Basis ist ein Motorrad, kein dokumentiertes Roggwil-Kart.
+menu-pitlane.wav und race-slipstream.wav: für dieses Projekt komponierte und gerenderte Musik, ohne externe Samples. Projektlizenz MIT.

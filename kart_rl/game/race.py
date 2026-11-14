@@ -104,6 +104,7 @@ class Player:
     best_flying: float | None = None
     lap_penalty: float = 0.0
     next_gate: int = 1
+    contact_until: float = 0.0
     lap_origin: float = 0.0
     step_start_s: float = 0.0
 
@@ -114,6 +115,7 @@ class Player:
     def reset(self):
         self.racer.reset()
         self.next_gate = 1
+        self.contact_until = 0.0
         self.lap_origin = 0.0
         self.release()
         self.keyboard.steer = self.keyboard.throttle = 0.0
@@ -195,6 +197,7 @@ class Player:
             "parked": self.finish_time is not None,
             "length": self.racer.env.kart.p.length,
             "width": self.racer.env.kart.p.width,
+            "contact": self.racer.env.t < self.contact_until,
             "drifting": self.racer.env.kart.drifting,
             "energy": round(self.energy, 1),
         }
@@ -486,6 +489,7 @@ def advance_field(players, actions, dt, laps, elapsed):
     for i, p in enumerate(players):
         env = p.racer.env
         if i in changed or env.off_track:
+            p.contact_until = env.t + 0.12
             env.s, env.lateral, env.idx = env.track.localize(env.kart.x, env.kart.y, hint=env.idx)
             s, progress, peak = origins[i]
             length = env.track.length
