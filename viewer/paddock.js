@@ -1,3 +1,4 @@
+import {profiles} from './race-sound.js';
 import {pilots, showroom} from './paddock-model.js';
 
 const by=id=>document.getElementById(id);
@@ -16,7 +17,7 @@ return `<main id="paddock">
 <button id="nextGarage" class="primary">Zur Garage →</button></div>
 <div id="loadout" hidden><fieldset><legend>Kart</legend><div class="options">${choices('car',Object.keys(cars))}</div></fieldset>
 <fieldset><legend>Reifen</legend><div class="options">${choices('tyre',Object.keys(tyres))}</div></fieldset>
-<div id="ratings"></div><div class="actions"><button id="backProfile">Zurück</button><button id="joinGrid" class="primary">In die Lobby →</button></div></div></article>
+<button id="listenMotor" type="button"></button><div id="ratings"></div><div class="actions"><button id="backProfile">Zurück</button><button id="joinGrid" class="primary">In die Lobby →</button></div></div></article>
 <figure><div id="displayKart"></div><figcaption id="caption"></figcaption></figure></section>
 <section id="clubLobby" hidden><p class="kicker">PRIVATER RENNRAUM</p><h1>Fahrerlager</h1><p id="seats"></p><div id="cards"></div>
 <div class="actions"><button id="copyLink">Einladungslink kopieren</button><label id="difficulty">Bot-Stufe <select id="botLevel"><option>Club</option><option selected>Sport</option><option>Pro</option></select></label><button id="plusBot">+ Bot</button><button id="minusBot">− Bot</button></div>
@@ -25,7 +26,7 @@ return `<main id="paddock">
 <section id="podium" hidden><p class="kicker">ZIEL / ROGGWIL</p><h1>Rennergebnis</h1><ol id="results"></ol><p id="flying"></p><button id="saveLap">Als persönliche Bestzeit merken</button><div class="actions"><button id="againReady">Bereit zur Revanche</button><button id="againStart" class="primary">Neues Rennen →</button></div></section>
 <p id="personalRecord"></p><p id="raceNotice" role="status"></p></main><div id="startSignal" aria-live="polite"></div>`;
 }
-export function createPaddock(connect,send){
+export function createPaddock(connect,send,sound){
   document.body.insertAdjacentHTML('beforeend',markup());
   const profile={name:'',avatar:'Fuchs',car:'Club',tyre:'Standard'};
   let state, lastCards='',lastResults='',lastSignal='',lastRank=0,passUntil=0,phase='';
@@ -35,18 +36,20 @@ export function createPaddock(connect,send){
     const rows=[['Tempo',Math.round(speed*3.6)+' km/h',speed/24],['Antritt',(accel*drive).toFixed(1)+' m/s²',accel*drive/15.2],['Handling',Math.round(turn*grip*100)+' %',turn*grip/1.26]];
     by('ratings').innerHTML=rows.map(([k,v,f])=>`<div>${k}<b>${v}</b><meter min="0" max="1" value="${f}"></meter></div>`).join('');
     by('caption').textContent=`${profile.avatar} / ${profile.car} · ${profile.tyre}`;
+    by('listenMotor').textContent='▶ Motor anhören · '+profiles[profile.car][0];
     preview(profile.car,profile.tyre,profile.avatar);
   }
   for(const key of ['car','tyre','avatar']){
     const buttons=[...document.querySelectorAll('[data-'+key+']')];
-    buttons.forEach(b=>b.onclick=()=>{profile[key]=b.dataset[key];buttons.forEach(o=>o.setAttribute('aria-pressed',o===b));spec();});
+    buttons.forEach(b=>b.onclick=()=>{profile[key]=b.dataset[key];if(key==='car')sound.preview(profile.car);buttons.forEach(o=>o.setAttribute('aria-pressed',o===b));spec();});
   }
   spec();
+  by('listenMotor').onclick=()=>sound.preview(profile.car);
   function notice(msg){by('raceNotice').textContent=msg;}
   by('nextGarage').onclick=()=>{
     profile.name=by('pilotName').value.trim();
     if(!profile.name){notice('Gib zuerst deinen Fahrernamen ein.');by('pilotName').focus();return;}
-    notice('');by('profile').hidden=true;by('loadout').hidden=false;by('pageTitle').textContent='Deine Garage';
+    sound.preview(profile.car);notice('');by('profile').hidden=true;by('loadout').hidden=false;by('pageTitle').textContent='Deine Garage';
   };
   by('backProfile').onclick=()=>{by('profile').hidden=false;by('loadout').hidden=true;by('pageTitle').textContent='Fahrerprofil';notice('');};
   by('pilotName').onkeydown=e=>{if(e.key==='Enter')by('nextGarage').click();};

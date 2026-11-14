@@ -113,6 +113,8 @@
 import * as THREE from 'three';
 import {createRaceMap} from './race-map.js';
 import {startBoxes,gantryLights} from './start-grid.js';
+import {raceSound} from './race-sound.js';
+import {openingFilm} from './opening-film.js';
 import {createPaddock} from './paddock.js';
 import {paddockKart} from './paddock-model.js';
 const club=document.documentElement.classList.contains('club');
@@ -176,7 +178,7 @@ window.addEventListener('resize', resize);
 resize();
 
 // ------------------------------------------------------------------ track
-let drawRaceMap, startField, gridRace, lightState, finishStripe;
+let sound, drawRaceMap, startField, gridRace, lightState, finishStripe;
 let track = null, raceline = null, center = null;
 const overlays = {};
 let bounds = { cx: 70, cz: -55, size: 140 };
@@ -642,7 +644,7 @@ function connectLive() {
     if (!opened && Date.now() < retryUntil) {
       status(`Server startet noch – verbinde erneut … (${Math.ceil((retryUntil - Date.now()) / 1000)} s)`);
       retryTimer = setTimeout(connectLive, 2000);
-    } else { if(paddock) {document.body.classList.remove('on-track'); paddock.closed(serverError || 'Verbindung getrennt.');} status(serverError || (opened ? 'Verbindung getrennt' : 'Verbindung fehlgeschlagen – läuft der Server? (Dashboard: Log des Laufs prüfen)')); }
+    } else { if(paddock) {sound?.stop();document.body.classList.remove('on-track'); paddock.closed(serverError || 'Verbindung getrennt.');} status(serverError || (opened ? 'Verbindung getrennt' : 'Verbindung fehlgeschlagen – läuft der Server? (Dashboard: Log des Laufs prüfen)')); }
   };
   ws.onerror = () => {};
   ws.onmessage = ev => handleLive(JSON.parse(ev.data));
@@ -747,6 +749,7 @@ function handleLive(m) {
     if (m.game) { game = { ...game, ...m.game }; renderGameLaps(); }
     if (m.game?.arcade) {
       drawRaceMap?.(game, m.states);
+      sound?.update(game,m.states);
       const ids = new Set(m.states.map(st => st.id));
       for (const [id, kart] of Object.entries(liveKarts)) if (!ids.has(id)) {
         scene.remove(kart.group); scene.remove(kart.trail); karts.splice(karts.indexOf(kart), 1); delete liveKarts[id]; refreshKartList();
@@ -905,7 +908,9 @@ window.kartViewer = {
     $('toggle').textContent='Analyse';
     $('viewerTitle').textContent='Entwickler / Analyse';
     for(const id of ['showTrail','showRaceline']) {$(id).checked=false;$(id).dispatchEvent(new Event('change'));}
-    paddock=createPaddock(connectLive,send);
+    sound=raceSound();
+    paddock=createPaddock(connectLive,send,sound);
+    openingFilm(track,scene,camera,renderer,sound);
   }
   window.kartViewer.ready = true;
   animate();

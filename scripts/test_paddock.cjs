@@ -43,6 +43,8 @@ async function driver(page){
 }
 async function enter(page,link,name,avatar,car,tyre){
   await driver(page);await page.goto(link);
+  await page.click('#openingFilm button');
+  await page.getByRole('button',{name:'Überspringen'}).click();
   await page.fill('#pilotName',name);await page.click('[data-avatar="'+avatar+'"]');
   await page.click('#nextGarage');await page.click('[data-car="'+car+'"]');
   await page.click('[data-tyre="'+tyre+'"]');
@@ -110,7 +112,7 @@ async function enter(page,link,name,avatar,car,tyre){
     await b.waitForSelector('#podium:visible');assert.deepEqual(result.results,(await state(b)).results);
     for(const p of pages)assert.deepEqual(await p.evaluate(()=>window.lineCrossings),[0,1,2,3]);
     await a.click('#saveLap');
-    assert.match(await a.locator('#personalRecord').innerText(),/Club \/ Standard · KartArcade-v2/);
+    assert.match(await a.locator('#personalRecord').innerText(),/Club \/ Standard Â· KartArcade-v2/);
     await a.screenshot({path:path.join(artifacts,'result.png')});
     await b.click('#againReady');await a.click('#againReady');await a.click('#againStart');
     await a.waitForFunction(()=>window.kartViewer.gameState().phase==='countdown');

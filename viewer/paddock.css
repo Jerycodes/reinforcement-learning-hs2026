@@ -54,3 +54,11 @@ body:not(.on-track) #raceMap,#raceMap[hidden]{display:none}
 #raceMap li span:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #raceMap li span:last-child{color:#c4d3d3}
 @media(max-height:500px){#raceMap{width:126px;font-size:10px}}
+#openingFilm{position:fixed;inset:0;z-index:12;display:grid;align-content:end;justify-items:start;gap:24px;padding:6vw;background:linear-gradient(0deg,#111f24f5,transparent 70%),repeating-linear-gradient(-30deg,#143f41 0 12vw,#205654 12vw 13vw,#143f41 13vw 15vw)}
+#openingFilm strong{color:#d6ff59;font:italic 950 clamp(48px,9vw,132px)/.85 system-ui;letter-spacing:-.065em}
+#openingFilm button{background:#d6ff59;color:#102323;padding:.85em 1.4em;font-weight:bold}
+.opening-shot #openingFilm{background:linear-gradient(0deg,#07181999,transparent 48%);border-block:5vh solid #091015}
+.club body.opening-shot:not(.on-track) #scene{visibility:visible}
+.opening-shot #paddock{visibility:hidden}
+#raceSound{position:fixed;right:12px;top:52px;z-index:14;background:#102028ed;color:white;border-radius:8px;padding:6px 10px;font:13px system-ui}
+#raceSound summary{cursor:pointer}#raceSound label{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0}
